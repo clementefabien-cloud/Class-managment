@@ -198,6 +198,9 @@ table.stats tr:nth-child(even){background:var(--panel2)}
 .chip.on{background:var(--accent);color:#fff;border-color:var(--accent2)}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:30px;box-shadow:var(--shadow2);z-index:300;font-weight:600;font-size:13px;opacity:0;transition:.3s;pointer-events:none}
 .toast.show{opacity:.95}
+/* ===== Crédits ===== */
+.credit-badge{position:fixed;bottom:6px;right:10px;z-index:400;font-size:11px;font-weight:600;color:var(--ink3);background:rgba(255,255,255,.75);border:1px solid var(--border);border-radius:20px;padding:3px 10px;pointer-events:none;backdrop-filter:blur(2px)}
+#tab-plan:fullscreen .credit-badge,#tab-plan.fs-fallback .credit-badge{z-index:400}
 .divider{height:1px;background:var(--border);margin:12px 0}
 .hint-box{background:var(--infobg);border:1px solid #bfdbfe;border-radius:10px;padding:10px;font-size:12px;color:#1e40af}
 .warn-box{background:var(--warnbg);border:1px solid #fcd34d;border-radius:10px;padding:10px;font-size:12px;color:#92400e}
@@ -220,7 +223,7 @@ small.tag{display:inline-block;background:var(--bg2);border:1px solid var(--bord
 @media print{
   body{background:#fff}
   .topbar,.tabs,.sidebar,.toast,#tab-students,#tab-stats,#tab-layout,#modalRoot,#fileInput,#csvFileInput,
-  #searchInput,#shuffleBtn,#printBtn,#planAddBtn,#planRemoveBtn,#fullscreenBtn,#saveBtn,#saveStatus,.layout-hint,.muted,#importCsvBtn,#unplacedBar,#planSettingsBtn,#planClassSelect{display:none !important}
+  #searchInput,#shuffleBtn,#printBtn,#planAddBtn,#planRemoveBtn,#fullscreenBtn,#saveBtn,#saveStatus,.layout-hint,.muted,#importCsvBtn,#unplacedBar,#planSettingsBtn,#planClassSelect,#creditBadge{display:none !important}
   #tab-plan:fullscreen #planSettingsBtn,#tab-plan.fs-fallback #planSettingsBtn{display:inline-flex !important}
 #planClassSelect{display:none}
 #tab-plan:fullscreen #planClassSelect,#tab-plan.fs-fallback #planClassSelect{display:inline-block !important;min-width:200px}
@@ -334,6 +337,7 @@ small.tag{display:inline-block;background:var(--bg2);border:1px solid var(--bord
 </div>
 <div id="modalRoot"></div>
 <div id="toast" class="toast"></div>
+<div id="creditBadge" class="credit-badge">Développé par Caroline et Fabien CLEMENTE avec l'assistance de Vibe</div>
 <input type="file" id="fileInput" accept="application/json" style="display:none" />
 <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none" />
 
@@ -1716,8 +1720,9 @@ function syncOverlaysWithFullscreen(){
   const plan=document.getElementById('tab-plan');
   const modal=document.getElementById('modalRoot');
   const tst=document.getElementById('toast');
+  const credit=document.getElementById('creditBadge');
   const inFs = document.fullscreenElement===plan || plan.classList.contains('fs-fallback');
-  [modal,tst].forEach(n=>{
+  [modal,tst,credit].forEach(n=>{
     if(!n) return;
     if(inFs && n.parentElement!==plan){ plan.appendChild(n); }
     if(!inFs && n.parentElement===plan){ document.body.appendChild(n); }
