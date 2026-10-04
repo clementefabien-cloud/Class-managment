@@ -1,0 +1,2411 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gestion de Classe</title>
+<style>
+:root{
+  --bg:#f1f5f9; --bg2:#e2e8f0;
+  --panel:#ffffff; --panel2:#f8fafc;
+  --ink:#0f172a; --ink2:#475569; --ink3:#94a3b8;
+  --border:#cbd5e1;
+  --accent:#2563eb; --accent2:#1d4ed8;
+  --desk:#ffffff; --desk-line:#64748b;
+  --seat-empty:#eef2f7; --seat-empty2:#e2e8f0;
+  --seat-disabled:#94a3b8; --seat-disabled2:#64748b;
+  --prof:#fde68a; --prof2:#f59e0b;
+  --board:#1e293b;
+  --good:#16a34a; --goodbg:#dcfce7;
+  --warn:#d97706; --warnbg:#fef3c7;
+  --bad:#dc2626; --badbg:#fee2e2;
+  --info:#2563eb; --infobg:#dbeafe;
+  --shadow:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+  --shadow2:0 4px 12px rgba(0,0,0,.15);
+  --radius:10px;
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  color:var(--ink);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-size:14px;line-height:1.4}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;transition:.15s}
+button:hover{background:var(--bg2)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent2)}
+button.primary:hover{background:var(--accent2)}
+button.danger{background:var(--bad);color:#fff;border-color:#b91c1c}
+button.danger:hover{background:#b91c1c}
+button.ghost{background:transparent;border-color:transparent}
+button.ghost:hover{background:var(--bg2)}
+button.icon{padding:4px 6px;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center}
+button.sm{padding:2px 8px;font-size:12px}
+input,select,textarea{font-family:inherit;font-size:inherit;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0}
+.layout{display:grid;grid-template-columns:1fr 380px;gap:14px;padding:14px;max-width:1400px;margin:0 auto;align-items:start}
+.main-col{min-width:0}
+header.topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;margin-bottom:14px;box-shadow:var(--shadow);position:sticky;top:8px;z-index:30}
+header.topbar h1{font-size:18px;margin:0;font-weight:700;letter-spacing:-.01em}
+header.topbar .spacer{flex:1}
+.class-select{min-width:180px}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tab{padding:7px 14px;border-radius:8px 8px 0 0;border:1px solid transparent;background:var(--panel2);color:var(--ink2)}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent2)}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+.panel h2{margin:0 0 10px;font-size:15px}
+.panel+.panel{margin-top:14px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row+.row{margin-top:8px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;color:var(--ink2);font-weight:600}
+.muted{color:var(--ink3);font-size:12px}
+.center{align-items:center;justify-content:center}
+.layout-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.layout-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ===== Plan de classe ===== */
+.plan-wrap{position:relative}
+.board{background:var(--board);color:#e2e8f0;border-radius:8px;padding:8px 14px;text-align:center;font-weight:600;letter-spacing:.05em;margin:0 auto 14px;max-width:70%;font-size:12px;text-transform:uppercase;cursor:pointer;border:2px dashed transparent;transition:.15s;user-select:none}
+.board:hover{border-color:#64748b}
+.desk-grid{display:grid;gap:14px;justify-content:center;align-content:center}
+.desk{background:var(--desk);border:1.5px solid var(--desk-line);border-radius:12px;padding:6px;box-shadow:var(--shadow);position:relative;transition:.15s}
+.desk.selected{box-shadow:0 0 0 3px var(--accent),var(--shadow2)}
+.desk-label{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:var(--desk-line);color:#fff;font-size:10px;font-weight:700;padding:1px 8px;border-radius:20px;white-space:nowrap;z-index:3}
+.seats{display:flex;gap:6px;justify-content:center}
+.seats.vertical{flex-direction:column}
+.seat{flex:1 1 auto;min-width:60px;min-height:66px;border-radius:8px;background:var(--seat-empty);border:1.5px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;text-align:center;position:relative;transition:.12s;overflow:visible}
+.seat.drop-target{background:var(--infobg);border-color:var(--accent);border-style:solid}
+.seat.disabled{background:repeating-linear-gradient(45deg,var(--seat-disabled),var(--seat-disabled) 8px,var(--seat-disabled2) 8px,var(--seat-disabled2) 16px);border-style:solid;border-color:var(--seat-disabled2);cursor:not-allowed}
+.seat.disabled::after{content:"⛔";font-size:18px}
+.seat.disabled .student{display:none}
+.seat .student{width:100%;cursor:grab;font-weight:600;font-size:12px;line-height:1.15;user-select:none;position:relative}
+.seat .student:active{cursor:grabbing}
+.seat .student.dragging{opacity:.4}
+.seat .student .sname{display:block;overflow-wrap:break-word}
+.seat .student .sel-dot{position:absolute;top:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px #fff}
+.seat .indicators{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;margin-top:3px;min-height:16px}
+.ind{display:inline-flex;align-items:center;justify-content:center;gap:1px;font-size:calc(10px * var(--ind-scale,1));padding:calc(1px + (var(--ind-scale,1) - 1) * 2px) calc(4px * var(--ind-scale,1));border-radius:8px;font-weight:700;line-height:calc(14px * var(--ind-scale,1));height:calc(16px * var(--ind-scale,1));cursor:pointer;border:1px solid transparent;transition:.12s}
+.ind:hover{transform:scale(1.15);filter:brightness(.95)}
+.ind.zero{opacity:.3}
+.prof-desk{background:var(--prof);border:1.5px solid var(--prof2);border-radius:12px;padding:8px 14px;text-align:center;font-weight:700;color:#78350f;margin:18px auto 0;max-width:60%;cursor:pointer;border-style:solid;transition:.15s;letter-spacing:.04em}
+.prof-desk:hover{filter:brightness(.98)}
+/* ===== Plein écran ===== */
+#tab-plan:fullscreen{background:var(--bg);padding:16px;overflow:auto}
+#tab-plan:fullscreen .panel{max-width:none;min-height:100%;box-shadow:none;background:var(--bg)}
+#tab-plan:fullscreen .desk-grid{gap:20px}
+#tab-plan:fullscreen .desk{min-height:90px}
+/* ===== Fiche élève en plein écran ===== */
+.fs-student-card{display:none}
+#tab-plan:fullscreen .fs-student-card.show,#tab-plan.fs-fallback .fs-student-card.show{display:block;position:fixed;bottom:0;left:0;right:0;max-height:15vh;overflow:auto;z-index:60;background:var(--panel);border-top:2px solid var(--accent);border-radius:14px 14px 0 0;box-shadow:0 -6px 24px rgba(15,23,42,.25);padding:10px 16px 16px;transition:max-height .2s}
+.fs-card-tools{position:sticky;top:-10px;float:right;z-index:5;display:flex;gap:4px}
+.hist-list{max-height:180px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:4px 8px;background:rgba(148,163,184,.06)}
+.hist-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border)}
+.hist-row:last-child{border-bottom:none}
+.hist-row span:first-child{flex:1}
+.hist-row b.plus{color:#16a34a}
+.hist-row b.minus{color:#dc2626}
+.hist-row .muted{white-space:nowrap}
+#tab-plan:fullscreen .fs-student-card.show .panel,#tab-plan.fs-fallback .fs-student-card.show .panel{box-shadow:none;border:none;padding:0;max-width:none}
+#tab-plan:fullscreen .fs-student-card.show .student-card,#tab-plan.fs-fallback .fs-student-card.show .student-card{padding:4px 0}
+#tab-plan:fullscreen .fs-student-card.show .counter-grid,#tab-plan.fs-fallback .fs-student-card.show .counter-grid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+#tab-plan:fullscreen .seat{min-width:80px;min-height:84px}
+#tab-plan:fullscreen .seat .student{font-size:14px}
+#tab-plan.fs-fallback{position:fixed;inset:0;z-index:999;background:var(--bg);overflow:auto;padding:16px}
+#tab-plan.fs-fallback .panel{max-width:none;height:100%;overflow:auto}
+.unplaced-bar{display:none;margin-top:16px;padding:10px 14px;border:1.5px dashed var(--border);border-radius:10px;background:var(--infobg,#f0f4ff)}
+.unplaced-bar.show{display:block}
+.unplaced-bar.drop-active{border-color:var(--accent);border-style:solid;background:var(--infobg,#e0e8ff)}
+.unplaced-bar .utitle{font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.unplaced-bar .uchips{display:flex;flex-wrap:wrap;gap:8px}
+.unplaced-bar .uchip{background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-weight:600;font-size:12px;cursor:grab;user-select:none;display:flex;align-items:center;gap:5px;transition:.12s;white-space:nowrap}
+.unplaced-bar .uchip:hover{border-color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.unplaced-bar .uchip.dragging{opacity:.4}
+.unplaced-bar .uchip .ustag{font-size:10px;opacity:.7}
+.layout-hint{font-size:11px;color:var(--ink3);text-align:center;margin-top:10px}
+
+/* flags */
+.punition-flag{position:absolute;top:-8px;left:-8px;background:var(--bad);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 0 0 2px #fff;z-index:2}
+.punition-flag.warn{background:var(--warn)}
+.punition-flag.ok{background:var(--good)}
+.need-badges{position:absolute;top:-4px;right:-6px;display:flex;flex-direction:column;gap:2px;z-index:2}
+.need-badge{border-radius:50%;width:18px;height:18px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 0 0 2px #fff}
+.need-badge.emoji{background:#fff;border:1.5px solid var(--ink2)}
+.need-ring{box-shadow:0 0 0 3px var(--need-color,#7c3aed)}
+
+/* ===== Panneau latéral ===== */
+.sidebar{position:sticky;top:80px}
+.student-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px}
+.sc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.sc-name{font-size:16px;font-weight:700;cursor:pointer}
+.sc-name:hover{text-decoration:underline dotted var(--accent)}
+.counter-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.counter{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.counter .lbl{font-size:11px;font-weight:600;color:var(--ink2)}
+.counter .val{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.counter .btns{display:flex;gap:3px}
+.counter .btns button{padding:0 7px;height:24px;font-weight:700}
+.btns .minus{color:var(--bad)} .btns .plus{color:var(--good)}
+.kv{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.kv:last-child{border:0}
+.kv b{font-variant-numeric:tabular-nums}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge.good{background:var(--goodbg);color:var(--good)}
+.badge.warn{background:var(--warnbg);color:var(--warn)}
+.badge.bad{background:var(--badbg);color:var(--bad)}
+.badge.info{background:var(--infobg);color:var(--info)}
+.need-box{background:#ede9fe;border:1px solid #c4b5fd;border-radius:10px;padding:10px;font-size:12px;color:#5b21b6;margin-top:8px}
+.need-sel{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.need-sel .chip{font-size:11px}
+.need-sel .chip.on{background:#7c3aed;border-color:#6d28d9;color:#fff}
+
+/* ===== Liste élèves ===== */
+.elist{display:flex;flex-direction:column;gap:6px;max-height:380px;overflow:auto}
+.csv-preview{width:100%;border-collapse:collapse;font-size:12px}
+.csv-preview th,.csv-preview td{border:1px solid #e2e8f0;padding:4px 8px;text-align:left;white-space:nowrap}
+.csv-preview th{background:#f1f5f9;font-weight:600}
+.csv-preview tbody tr:nth-child(even){background:#f8fafc}
+.eitem{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--panel);cursor:pointer}
+.eitem:hover{background:var(--bg2)}
+.eitem.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.eitem .nm{flex:1;font-weight:600}
+.eitem .ct{font-size:11px;color:var(--ink3)}
+.eitem .rename{opacity:0;transition:.15s}
+.eitem:hover .rename{opacity:1}
+
+/* ===== Stats ===== */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px}
+.stat .n{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat .l{font-size:11px;color:var(--ink2);font-weight:600}
+table.stats{width:100%;border-collapse:collapse;font-size:12px}
+table.stats th,table.stats td{border:1px solid var(--border);padding:5px 7px;text-align:center}
+table.stats th{background:var(--panel2);font-weight:700}
+table.stats th.sortable{cursor:pointer;user-select:none}
+table.stats th.sortable:hover{background:var(--infobg)}
+table.stats td.name{text-align:left;font-weight:600}
+table.stats tr:nth-child(even){background:var(--panel2)}
+
+/* ===== Modal ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:14px}
+.modal{background:var(--panel);border-radius:14px;box-shadow:var(--shadow2);max-width:560px;width:100%;max-height:86vh;overflow:auto;padding:18px}
+.modal.wide{max-width:720px}
+.modal h3{margin:0 0 14px;font-size:17px}
+.modal .close{float:right}
+.input-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.input-row label{min-width:130px;font-size:12px;font-weight:600;color:var(--ink2)}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chip{padding:3px 9px;border-radius:20px;background:var(--bg2);font-size:12px;cursor:pointer;border:1px solid var(--border);user-select:none}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent2)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:30px;box-shadow:var(--shadow2);z-index:300;font-weight:600;font-size:13px;opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:.95}
+.divider{height:1px;background:var(--border);margin:12px 0}
+.hint-box{background:var(--infobg);border:1px solid #bfdbfe;border-radius:10px;padding:10px;font-size:12px;color:#1e40af}
+.warn-box{background:var(--warnbg);border:1px solid #fcd34d;border-radius:10px;padding:10px;font-size:12px;color:#92400e}
+.alert-row{display:flex;gap:8px;align-items:flex-start;margin-top:8px}
+.empty-state{text-align:center;padding:40px 20px;color:var(--ink3)}
+.empty-state .big{font-size:40px;display:block;margin-bottom:8px}
+small.tag{display:inline-block;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:1px 6px;font-size:11px;color:var(--ink2);font-weight:600}
+
+/* layout presets */
+.preset-card{border:1.5px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:.15s;background:var(--panel)}
+.preset-card:hover{border-color:var(--accent);background:var(--infobg)}
+.preset-card.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.preset-card .pt{font-weight:700;font-size:13px;margin-bottom:4px}
+.preset-card .pd{font-size:11px;color:var(--ink3)}
+.preset-mini{display:grid;gap:2px;margin:6px 0;justify-content:center}
+.preset-mini i{width:10px;height:10px;border-radius:2px;background:var(--desk-line);display:block}
+.preset-mini i.off{background:var(--border)}
+@media(max-width:980px){.layout{grid-template-columns:1fr}.sidebar{position:static}}
+/* ===== Print / PDF ===== */
+@media print{
+  body{background:#fff}
+  .topbar,.tabs,.sidebar,.toast,#tab-students,#tab-stats,#tab-layout,#modalRoot,#fileInput,#csvFileInput,
+  #searchInput,#shuffleBtn,#printBtn,#planAddBtn,#planRemoveBtn,#fullscreenBtn,#saveBtn,#saveStatus,.layout-hint,.muted,#importCsvBtn,#unplacedBar,#planSettingsBtn,#planClassSelect{display:none !important}
+  #tab-plan:fullscreen #planSettingsBtn,#tab-plan.fs-fallback #planSettingsBtn{display:inline-flex !important}
+#planClassSelect{display:none}
+#tab-plan:fullscreen #planClassSelect,#tab-plan.fs-fallback #planClassSelect{display:inline-block !important;min-width:200px}
+  .layout{display:block;max-width:none;padding:0;margin:0}
+  .panel{border:none;box-shadow:none;padding:0}
+  #tab-plan{display:block !important}
+  .plan-wrap{padding:10px}
+  .desk-grid{gap:10px;page-break-inside:avoid}
+  .desk{box-shadow:none;border:1.5px solid #333;break-inside:avoid}
+  .seat .indicators,.seat .student .sel-dot,.punition-flag{display:none !important}
+  .seat .student{font-size:13px}
+  .board{max-width:80%}
+  .prof-desk{max-width:70%}
+  .print-header{display:block !important;text-align:center;margin-bottom:14px}
+  .print-header h2{margin:0 0 4px;font-size:20px}
+  .print-header .sub{font-size:13px;color:#444}
+}
+.print-header{display:none}
+.print-header h2{margin:0 0 4px}
+.print-header .sub{font-size:13px;color:#444}
+/* ===== Indicateur de sauvegarde ===== */
+.save-status{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:var(--bg2);color:var(--ink3);white-space:nowrap;border:1px solid var(--border);transition:.2s}
+.save-status.saved{background:var(--goodbg);color:var(--good);border-color:#86efac}
+.save-status.pending{background:var(--warnbg);color:var(--warn);border-color:#fcd34d}
+.save-status.error{background:var(--badbg);color:var(--bad);border-color:#fca5a5}
+.save-status.flash{animation:saveFlash .6s ease}
+@keyframes saveFlash{0%{transform:scale(1)}30%{transform:scale(1.15)}100%{transform:scale(1)}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="main-col">
+    <header class="topbar">
+      <h1>🏫 Gestion de Classe</h1>
+      <div class="spacer"></div>
+      <select id="classSelect" class="class-select" title="Sélectionner une classe"></select>
+      <button id="addClassBtn" class="icon" title="Nouvelle classe">➕</button>
+      <button id="renameClassBtn" class="icon" title="Renommer la classe">✏️</button>
+      <button id="delClassBtn" class="icon danger" title="Supprimer la classe">🗑️</button>
+      <span style="width:1px;height:24px;background:var(--border)"></span>
+      <button id="importBtn" title="Importer JSON">📥 Importer</button>
+      <button id="exportBtn" title="Exporter JSON">📤 Exporter</button>
+      <span style="width:1px;height:24px;background:var(--border)"></span>
+      <button id="saveBtn" class="primary" title="Sauvegarder manuellement">💾 Sauvegarder</button>
+      <span id="saveStatus" class="save-status" title="État de la sauvegarde">—</span>
+      <button id="settingsBtn" title="Personnalisation & règles">⚙️</button>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="plan">🗺️ Plan de classe</button>
+      <button class="tab" data-tab="students">👥 Élèves</button>
+      <button class="tab" data-tab="stats">📊 Statistiques</button>
+      <button class="tab" data-tab="layout">📐 Disposition</button>
+    </div>
+
+    <div id="tab-plan" class="tab-content">
+      <div class="panel">
+        <div class="row" style="margin-bottom:10px">
+          <input id="searchInput" placeholder="🔎 Rechercher un élève..." style="flex:1;min-width:200px" />
+          <button id="planAddBtn" class="primary" title="Ajouter un élève à la classe et le placer">➕ Ajouter</button>
+          <button id="planRemoveBtn" title="Retirer ou supprimer un élève">🗑️ Retirer</button>
+          <button id="shuffleBtn" title="Générer / placer les élèves">🎲 Générer</button>
+          <button id="printBtn" title="Imprimer / PDF du plan">🖨️ Imprimer</button>
+          <button id="fullscreenBtn" title="Afficher le plan en plein écran">⛶ Plein écran</button>
+          <select id="planClassSelect" class="class-select" title="Changer de classe / sous-groupe"></select>
+          <button id="planSettingsBtn" title="Personnalisation & règles">⚙️ Paramètres</button>
+          <span class="muted" style="flex-basis:100%">Glissez les élèves • Cliquez les icônes pour +1 (Ctrl = -1) • Double-cliquez un nom pour le modifier</span>
+        </div>
+        <div class="plan-wrap" id="planWrap">
+          <div class="print-header" id="printHeader"></div>
+          <div class="board" id="boardEl" title="Tableau (double-clic pour renommer)">📌 Tableau</div>
+          <div class="desk-grid" id="deskGrid"></div>
+          <div class="prof-desk" id="profDeskEl" title="Bureau du professeur (double-clic pour renommer)">🧑‍🏫 Bureau du Professeur</div>
+          <div class="unplaced-bar" id="unplacedBar"></div>
+        </div>
+        <div id="fsStudentCard" class="fs-student-card"></div>
+      </div>
+    </div>
+
+    <div id="tab-students" class="tab-content" style="display:none">
+      <div class="panel">
+        <h2 id="studentsTitle">👥 Élèves de la classe</h2>
+        <div class="row" id="addStudentBlock" style="margin-bottom:10px">
+          <input id="newStudentName" placeholder="Nom de l'élève" style="flex:1;min-width:200px" />
+          <select id="newStudentSex" style="width:90px">
+            <option value="">Sexe</option>
+            <option value="M">M</option>
+            <option value="F">F</option>
+          </select>
+          <button id="addStudentBtn" class="primary">➕ Ajouter</button>
+        </div>
+        <div class="row" id="importCsvBlock" style="margin-bottom:10px">
+          <button id="importCsvBtn" title="Importer une liste d'élèves depuis un fichier CSV">📁 Importer CSV</button>
+        </div>
+        <div id="studentList" class="elist"></div>
+      </div>
+    </div>
+
+    <div id="tab-stats" class="tab-content" style="display:none">
+      <div class="panel" id="statsPanel"></div>
+    </div>
+
+    <div id="tab-layout" class="tab-content" style="display:none">
+      <div class="panel" id="layoutPanel"></div>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div id="sidebarContent"></div>
+  </aside>
+</div>
+<div id="modalRoot"></div>
+<div id="toast" class="toast"></div>
+<input type="file" id="fileInput" accept="application/json" style="display:none" />
+<input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none" />
+
+<script>
+/* ====================================================================
+   CONSTANTES & ÉTAT
+==================================================================== */
+const STORAGE_KEY = 'gestionClasse.v3';
+const INDICATORS = [
+  { key:'participation', emoji:'🙋', label:'Participation', color:'#2563eb', bg:'#dbeafe' },
+  { key:'materiel',      emoji:'🎒', label:'Oubli de matériel', color:'#d97706', bg:'#fef3c7' },
+  { key:'devoirs',       emoji:'📝', label:'Oubli de devoirs', color:'#dc2626', bg:'#fee2e2' },
+  { key:'bavardage',     emoji:'💬', label:'Bavardage', color:'#7c3aed', bg:'#ede9fe' },
+  { key:'encouragement', emoji:'⭐', label:'Encouragement', color:'#16a34a', bg:'#dcfce7' },
+];
+const TRIMESTERS = ['T1','T2','T3'];
+// Types de besoins particuliers (modifiables par le prof). Stockés dans state.needTypes.
+const DEFAULT_NEED_TYPES = [
+  { key:'pap',      label:'PAP',         emoji:'♿', color:'#7c3aed' },
+  { key:'pai',      label:'PAI',         emoji:'🩺', color:'#0891b2' },
+  { key:'pps',      label:'PPS',         emoji:'📋', color:'#be185d' },
+  { key:'gevasco',  label:'GEVASCO',     emoji:'🔍', color:'#c2410c' },
+  { key:'tiers',    label:'Tiers-temps', emoji:'⏱️', color:'#1d4ed8' },
+  { key:'ulisis',   label:'Ulisis',      emoji:'🗂️', color:'#15803d' },
+  { key:'autre',    label:'Autre',       emoji:'📌', color:'#64748b' },
+];
+const DEFAULT_NEED_COLOR = '#7c3aed';
+
+const DEFAULT_RULES = {
+  motSeuilOublis: 3, motSeuilBavardages: 3,
+  punitionSeuilOublis: 6, punitionSeuilBavardages: 6,
+  noteMode: 'relatif', noteBase: 8, noteGain: 12, notePenBavardage: 0.5, noteAbsGain: 1,
+};
+
+// Presets de disposition
+const LAYOUT_PRESETS = {
+  'classique': { label:'Classique (4×4)', desc:'Grille 4×4, 2 places/bureau', cols:4, rows:4, build:()=>gridDesks(4,4) },
+  'ilots':     { label:'Îlots (3 groupes)', desc:'Îlots de 4 places', cols:3, rows:2, build:()=>ilotsDesks() },
+  'u':         { label:'Salle en U', desc:'3 côtés autour du prof', cols:5, rows:4, build:()=>uDesks() },
+  'double-u':  { label:'Double U', desc:'Deux U imbriqués', cols:6, rows:4, build:()=>doubleUDesks() },
+  'frontal':   { label:'Frontal (lignes)', desc:'6×4 face au tableau', cols:6, rows:4, build:()=>gridDesks(6,4) },
+};
+
+let state = {
+  classes: {},
+  subgroups: {},
+  currentClassId: null,
+  activeView: null,
+  activeTrimester: 'T1',
+  customIndicators: [],
+  indicatorEdits: {},
+  needTypes: JSON.parse(JSON.stringify(DEFAULT_NEED_TYPES)),
+  settings: { bgColor:'#f1f5f9', boardColor:'#1e293b', profColor:'#fde68a', needMode:'color', indScale:1 },
+  rules: Object.assign({}, DEFAULT_RULES),
+};
+
+function uid(){ return 'id'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); }
+
+/* ====================================================================
+   GÉNÉRATEURS DE DISPOSITION
+   Chaque desk: { id, label, row, col, disabled, orientation:'horizontal'|'vertical', seats:number(1..4), seatDisabled:[bool...] }
+==================================================================== */
+function gridDesks(cols,rows){
+  const desks=[]; let n=1;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const isDis=(r===0&&c===0)||(r===0&&c===cols-1);
+    desks.push({ id:'d'+n, label:'Bureau '+n, row:r, col:c, disabled:isDis, orientation:'horizontal', seats:2, seatDisabled:[false,false] });
+    n++;
+  }
+  return { cols, rows, desks };
+}
+function ilotsDesks(){
+  const desks=[]; let n=1;
+  for(let r=0;r<2;r++) for(let c=0;c<3;c++){
+    desks.push({ id:'d'+n, label:'Îlot '+(c+1)+'.'+(r+1), row:r, col:c, disabled:false, orientation:'horizontal', seats:4, seatDisabled:[false,false,false,false] });
+    n++;
+  }
+  return { cols:3, rows:2, desks, gapX:36, gapY:30 };
+}
+function uDesks(){
+  const desks=[]; let n=1;
+  for(let r=0;r<4;r++) for(let c=0;c<5;c++){
+    const isDis=!((c===0||c===4)||r===3);
+    desks.push({ id:'d'+n, label:'Bureau '+n, row:r, col:c, disabled:isDis, orientation:'horizontal', seats:2, seatDisabled:[false,false] });
+    n++;
+  }
+  return { cols:5, rows:4, desks };
+}
+function doubleUDesks(){
+  const desks=[]; let n=1;
+  for(let r=0;r<4;r++) for(let c=0;c<6;c++){
+    const ext=(c===0||c===5||r===3);
+    const int=((c===2||c===3)&&(r===1));
+    const isDis=!(ext||int);
+    desks.push({ id:'d'+n, label:'Bureau '+n, row:r, col:c, disabled:isDis, orientation:'horizontal', seats:2, seatDisabled:[false,false] });
+    n++;
+  }
+  return { cols:6, rows:4, desks };
+}
+function defaultLayout(){ return Object.assign({ board:{visible:true,label:'Tableau'}, prof:{visible:true,label:'Bureau du Professeur'} }, gridDesks(4,4)); }
+
+function applyPreset(presetKey){
+  const V=activeView(); const preset=LAYOUT_PRESETS[presetKey];
+  const built=preset.build(preset.cols,preset.rows);
+  built.board=V.layout.board||{visible:true,label:'Tableau'};
+  built.prof=V.layout.prof||{visible:true,label:'Bureau du Professeur'};
+  V.layout=built; V.layoutPreset=presetKey;
+  reassignViewSeats(V); save(); render();
+}
+function reassignSeats(cls){
+  // liste plate des places libres: {deskId,index}
+  const free=[];
+  cls.layout.desks.forEach(d=>{
+    if(d.disabled) return;
+    const nb=d.seats||2;
+    for(let si=0;si<nb;si++) if(!d.seatDisabled[si]) free.push({deskId:d.id,index:si});
+  });
+  cls.students.forEach(s=> s.seat=null);
+  cls.students.forEach((s,i)=>{ if(i<free.length) s.seat=free[i]; });
+}
+// Réassigne les places selon le type de vue (classe = student.seat, sous-groupe = assignments)
+function reassignViewSeats(V){
+  const free=[];
+  V.layout.desks.forEach(d=>{ if(d.disabled) return; const nb=d.seats||2; for(let si=0;si<nb;si++) if(!d.seatDisabled[si]) free.push({deskId:d.id,index:si}); });
+  if(V.assignments){
+    // sous-groupe : réassigner les membres aux places libres dans l'ordre
+    const members=V.assignments.filter(a=>a.studentId);
+    V.assignments=[];
+    members.forEach((a,i)=>{ if(i<free.length) V.assignments.push({deskId:free[i].deskId,index:free[i].index,classId:a.classId,studentId:a.studentId}); });
+  } else {
+    V.students.forEach(s=> s.seat=null);
+    V.students.forEach((s,i)=>{ if(i<free.length) s.seat=free[i]; });
+  }
+}
+// Libère les occupants au-delà de nb places pour un bureau donné, dans la vue active
+function freeSeatInView(V,deskId,nb){
+  if(V.assignments){
+    V.assignments=V.assignments.filter(a=> !(a.deskId===deskId && a.index>=nb));
+  } else {
+    V.students.forEach(st=>{ if(st.seat&&st.seat.deskId===deskId&&st.seat.index>=nb) st.seat=null; });
+  }
+}
+
+/* ====================================================================
+   PERSISTANCE
+==================================================================== */
+function newClass(name){
+  const id=uid();
+  state.classes[id]={ id, name, layout:defaultLayout(), layoutPreset:'classique', students:[] };
+  state.currentClassId=id; return id;
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const s=JSON.parse(raw);
+      state.classes=s.classes||{}; state.currentClassId=s.currentClassId||null;
+      state.subgroups=s.subgroups||{}; state.activeView=s.activeView||null;
+      state.activeTrimester=s.activeTrimester||'T1';
+      state.customIndicators=s.customIndicators||[];
+      state.indicatorEdits=s.indicatorEdits||{};
+      state.needTypes = (s.needTypes && s.needTypes.length) ? s.needTypes : JSON.parse(JSON.stringify(DEFAULT_NEED_TYPES));
+      state.settings=Object.assign({bgColor:'#f1f5f9',boardColor:'#1e293b',profColor:'#fde68a',needMode:'color',indScale:1,fsCardH:15,hiddenInds:null}, s.settings||{});
+      if(!state.settings.hiddenInds) state.settings.hiddenInds={};
+      state.rules=Object.assign({}, DEFAULT_RULES, s.rules||{});
+    }
+  }catch(e){ console.warn('load error',e); }
+  if(!state.currentClassId||!state.classes[state.currentClassId]) state.currentClassId=Object.keys(state.classes)[0]||null;
+  if(Object.keys(state.classes).length===0) newClass('Classe 6A');
+  // valider/réparer la vue active (classe ou sous-groupe)
+  if(state.activeView && state.activeView.type==='subgroup' && state.subgroups[state.activeView.id]){
+    // ok
+  } else if(state.activeView && state.activeView.type==='class' && state.classes[state.activeView.id]){
+    state.currentClassId=state.activeView.id;
+  } else {
+    state.activeView={type:'class', id:state.currentClassId};
+  }
+  // migration des sous-groupes (s'assurer qu'ils ont un layout)
+  Object.values(state.subgroups||{}).forEach(sg=>{
+    if(!sg.layout) sg.layout=defaultLayout();
+    if(!sg.layoutPreset) sg.layoutPreset='classique';
+    if(!sg.assignments) sg.assignments=[];
+    sg.layout.desks.forEach(d=>{
+      if(!d.orientation) d.orientation='horizontal';
+      if(!d.seats) d.seats=2;
+      const nb=d.seats;
+      if(!d.seatDisabled||d.seatDisabled.length<nb) d.seatDisabled=Array.from({length:nb},(_,i)=>(d.seatDisabled&&d.seatDisabled[i])||false);
+      d.seatDisabled=d.seatDisabled.slice(0,nb);
+    });
+  });
+  if(!state.lastSaveAt){ state.lastSaveAt = Date.now(); }
+  // migration: s'assurer orientation/seats sur anciens desks
+  Object.values(state.classes).forEach(c=>{
+    if(!c.layoutPreset) c.layoutPreset='custom';
+    c.layout.desks.forEach(d=>{
+      if(!d.orientation) d.orientation='horizontal';
+      if(!d.seats) d.seats=2;
+      const nb=d.seats;
+      if(!d.seatDisabled||d.seatDisabled.length<nb) d.seatDisabled=Array.from({length:nb},(_,i)=>(d.seatDisabled&&d.seatDisabled[i])||false);
+      d.seatDisabled=d.seatDisabled.slice(0,nb);
+    });
+    // migration besoins: anciens besoins stockés par label texte -> par key
+    c.students.forEach(st=>{
+      if(st.needs){
+        st.needs = st.needs.map(n=>{
+          if(typeof n==='string' && n.length<40 && !n.includes(' ')){
+            // essayer de matcher un type existant par label (insensible casse)
+            const found = state.needTypes.find(nt=> nt.label.toLowerCase()===n.toLowerCase());
+            return found ? found.key : n;
+          }
+          return n;
+        });
+      }
+      if(st.sex===undefined) st.sex='';
+    });
+  });
+}
+let saveTimer=null;
+function save(){
+  clearTimeout(saveTimer);
+  setSaveStatus('pending','Modifs en cours…');
+  saveTimer=setTimeout(()=>{ doSaveToStorage(false); },400);
+}
+// Sauvegarde manuelle immédiate
+function saveNow(){
+  clearTimeout(saveTimer);
+  doSaveToStorage(true);
+}
+function doSaveToStorage(manual){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    state.lastSaveAt = Date.now();
+    setSaveStatus('saved','💾 '+(manual?'Sauvegardé':'Auto')+' • '+fmtTime(state.lastSaveAt));
+    if(manual){ toast('Sauvegarde manuelle effectuée'); }
+  }catch(e){
+    console.warn(e);
+    setSaveStatus('error','⚠️ Échec sauvegarde');
+    if(manual){ toast('Échec de la sauvegarde'); }
+  }
+}
+function setSaveStatus(cls,msg){
+  const el=document.getElementById('saveStatus'); if(!el) return;
+  el.className='save-status '+cls; el.textContent=msg;
+  if(cls==='saved'){ el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),600); }
+}
+function fmtTime(ts){
+  const d=new Date(ts);
+  return d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+function refreshSaveStatus(){
+  if(state.lastSaveAt){ setSaveStatus('saved','💾 Sauvegardé • '+fmtTime(state.lastSaveAt)); }
+  else { setSaveStatus('','— Pas encore sauvegardé'); }
+}
+function currentClass(){ return state.classes[state.currentClassId]; }
+function isIndShownOnPlan(key){ return !(state.settings.hiddenInds||{})[key]; }
+function allIndicators(){ return INDICATORS.concat(state.customIndicators).map(i=> Object.assign({}, i, (state.indicatorEdits||{})[i.key]||{}) ); }
+// Vue active : classe OU sous-groupe (regroupe des élèves de plusieurs classes)
+function activeView(){
+  const v=state.activeView;
+  if(v && v.type==='subgroup' && state.subgroups[v.id]) return state.subgroups[v.id];
+  if(v && v.type==='class' && state.classes[v.id]) return state.classes[v.id];
+  // fallback : classe courante
+  return currentClass();
+}
+function isSubgroupView(){ return state.activeView && state.activeView.type==='subgroup' && !!state.subgroups[state.activeView.id]; }
+function activeLayout(){ const v=activeView(); return v ? v.layout : null; }
+function activeName(){ const v=activeView(); return v ? v.name : '—'; }
+// Renvoie l'objet élève ORIGINAL (vit dans sa classe de rattachement).
+// La recherche se fait dans TOUTES les classes (ids globalement uniques) →
+// les trackers remontent toujours dans la fiche élève de la classe d'origine.
+function findStudent(id){
+  for(const c of Object.values(state.classes)){
+    const s=c.students.find(x=>x.id===id);
+    if(s) return s;
+  }
+  return null;
+}
+// Retrouve la classe propriétaire d'un élève
+function findStudentClass(id){
+  for(const c of Object.values(state.classes)){ if(c.students.find(x=>x.id===id)) return c; }
+  return null;
+}
+// Liste des élèves visibles dans la vue active :
+// - classe : cls.students
+// - sous-groupe : résolution des assignments vers les élèves des classes source
+function activeStudents(){
+  if(isSubgroupView()){
+    const sg=activeView(); const out=[];
+    for(const a of sg.assignments){
+      const cls=state.classes[a.classId]; if(!cls) continue;
+      const st=cls.students.find(x=>x.id===a.studentId); if(st) out.push(st);
+    }
+    return out;
+  }
+  return currentClass().students;
+}
+// Résout l'élève assis à une place précise de la vue active
+function occupantAt(deskId, index){
+  if(isSubgroupView()){
+    const sg=activeView();
+    const a=sg.assignments.find(x=>x.deskId===deskId && x.index===index);
+    if(!a) return null;
+    const cls=state.classes[a.classId]; if(!cls) return null;
+    return cls.students.find(x=>x.id===a.studentId) || null;
+  }
+  const cls=currentClass();
+  return cls.students.find(st=>st.seat&&st.seat.deskId===deskId&&st.seat.index===index) || null;
+}
+
+/* ====================================================================
+   COMPTEURS PAR TRIMESTRE
+==================================================================== */
+function getTracker(s,key){
+  const t=state.activeTrimester;
+  if(!s.trackers) s.trackers={}; if(!s.trackers[t]) s.trackers[t]={};
+  if(s.trackers[t][key]===undefined) s.trackers[t][key]=0;
+  return s.trackers[t][key];
+}
+function setTracker(s,key,val){ const t=state.activeTrimester; if(!s.trackers) s.trackers={}; if(!s.trackers[t]) s.trackers[t]={}; s.trackers[t][key]=Math.max(0,val); }
+function incTracker(s,key,delta){
+  setTracker(s,key,getTracker(s,key)+delta);  // historique horodaté des saisies
+  if(delta!==0){
+    if(!s.hist) s.hist=[];
+    s.hist.push({ t:state.activeTrimester, k:key, d:delta, ts:Date.now() });
+    if(s.hist.length>500) s.hist=s.hist.slice(-500); // limite anti-gonflement du stockage
+  }
+  // proposition de punition active suite à cet oubli (matériel OU devoirs) ? → demande oui/non
+  if((key==='materiel'||key==='devoirs') && delta>0){
+    const after=punitionProposed(s);
+    if(after && after.level==='punition'){
+      askPunitionForOublis(s,after);
+    }
+  }
+}
+// Popup Oui/Non : appliquer la punition proposée pour oublis de matériel ?
+function askPunitionForOublis(s,prop){
+  const cls=findStudentClass(s.id);
+  const clsName=cls?cls.name:'';
+  const body=`
+  <div class="warn-box" style="background:var(--badbg);border-color:#fca5a5;color:#991b1b">
+    <b>${prop.emoji} Proposition : ${prop.label}</b><br>
+    <span class="muted">${escapeHtml(s.name)}${clsName?' ('+escapeHtml(clsName)+')':''} — ${prop.detail}</span>
+  </div>
+  <p class="muted">Voulez-vous appliquer cette punition pour oublis répétés ?</p>
+  <div class="row" style="justify-content:flex-end;margin-top:10px">
+    <button onclick="answerPunitionOublis('${s.id}',false)">✖ Non</button>
+    <button class="primary" onclick="answerPunitionOublis('${s.id}',true)">✔ Oui, appliquer</button>
+  </div>`;
+  openModal('⚠️ Punition pour oublis de matériel', body);
+  pendingPunitionOublis={ studentId:s.id, level:prop.level };
+}
+let pendingPunitionOublis=null;
+window.answerPunitionOublis=function(id,accept){
+  const p=pendingPunitionOublis; pendingPunitionOublis=null;
+  closeModal();
+  if(!p||p.studentId!==id) return;
+  const s=findStudent(id); if(!s) return;
+  if(accept){
+    doToggleValidated(s,p.level);
+    toast('Punition validée pour '+s.name);
+  } else {
+    // refus : mémoriser le niveau d'oublis au moment du refus → la proposition disparaît
+    // du plan et de la fiche jusqu'au prochain oubli (qui rouvrira le popup)
+    const t=state.activeTrimester;
+    if(!s.punitionRefusedAt) s.punitionRefusedAt={};
+    s.punitionRefusedAt[t]=Math.max(s.punitionRefusedAt[t]||0, oublisTotal(s));
+    s.hist.push({ t:state.activeTrimester, k:'__refus_punition', d:0, ts:Date.now() });
+    save(); render();
+    toast('Punition refusée — pas de sanction appliquée');
+  }
+};
+function studentHist(s){ return (s.hist||[]).filter(h=>h.t===state.activeTrimester).slice().reverse(); }
+function histFmt(ts){
+  const d=new Date(ts);
+  const p=n=>String(n).padStart(2,'0');
+  return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' à '+p(d.getHours())+':'+p(d.getMinutes());
+}
+
+/* ====================================================================
+   NOTE D'IMPLICATION (/20)
+==================================================================== */
+function implicationNote(s){
+  const R=state.rules;
+  const p=getTracker(s,'participation'), b=getTracker(s,'bavardage');
+  let gain=0;
+  if(R.noteMode==='absolu'){
+    // chaque participation vaut un nombre de points fixe
+    gain=p*(+R.noteAbsGain||1);
+  }else{
+    // relatif : comparé à l'élève le plus participatif de la vue active
+    const studs=activeStudents();
+    const maxP=Math.max(1,...studs.map(x=>getTracker(x,'participation')));
+    gain=maxP>0?(p/maxP)*(+R.noteGain||12):0;
+  }
+  let note=(+R.noteBase||8)+gain-b*(+R.notePenBavardage||0.5);
+  return Math.max(0,Math.min(20,Math.round(note*10)/10));
+}
+
+/* ====================================================================
+   PUNITIONS & SIGNALEMENTS
+   Workflow: proposition -> validation -> vérification
+==================================================================== */
+function oublisTotal(s){ return getTracker(s,'materiel')+getTracker(s,'devoirs'); }
+function punitionProposed(s){
+  const o=oublisTotal(s), b=getTracker(s,'bavardage'); const R=state.rules;
+  const t=state.activeTrimester;
+  // refus enregistré : masque les propositions basées sur les oublis tant que leur nombre n'augmente pas
+  const refused=(s.punitionRefusedAt && s.punitionRefusedAt[t]) || 0;
+  const punByOublis = o>=R.punitionSeuilOublis && o>refused;
+  const punByBav = b>=R.punitionSeuilBavardages;
+  if(punByOublis||punByBav)
+    return { level:'punition', label:'Punition de réflexion', emoji:'📄',
+      detail: punByOublis?'Oublis répétés ('+o+'≥'+R.punitionSeuilOublis+')':'Bavardages répétés ('+b+'≥'+R.punitionSeuilBavardages+')' };
+  const motByOublis = o>=R.motSeuilOublis && o>refused;
+  const motByBav = b>=R.motSeuilBavardages;
+  if(motByOublis||motByBav)
+    return { level:'mot', label:'Mot dans le carnet', emoji:'📒',
+      detail: motByOublis?'Oublis ('+o+'≥'+R.motSeuilOublis+')':'Bavardages ('+b+'≥'+R.motSeuilBavardages+')' };
+  return null;
+}
+function hasValidated(s,type){ const t=state.activeTrimester; return !!(s.validated&&s.validated[t]&&s.validated[t][type]); }
+function logSanctionHist(s,evt,type){
+  if(!s.hist) s.hist=[];
+  s.hist.push({ t:state.activeTrimester, k:'__'+evt+'_'+type, d:0, ts:Date.now() });
+  if(s.hist.length>500) s.hist=s.hist.slice(-500);
+}
+function doToggleValidated(s,type){
+  const t=state.activeTrimester;
+  if(!s.validated) s.validated={}; if(!s.validated[t]) s.validated[t]={};
+  s.validated[t][type]=!s.validated[t][type];
+  if(s.validated[t][type]){ logSanctionHist(s,'valide',type); }
+  else { logSanctionHist(s,'annule',type); if(!s.verified) s.verified={}; if(!s.verified[t]) s.verified[t]={}; s.verified[t][type]=false; }
+  save(); render();
+}
+function hasVerified(s,type){ const t=state.activeTrimester; return !!(s.verified&&s.verified[t]&&s.verified[t][type]); }
+function doToggleVerified(s,type){
+  if(!hasValidated(s,type)){ toast('Validez d\'abord la décision'); return; }
+  const t=state.activeTrimester;
+  if(!s.verified) s.verified={}; if(!s.verified[t]) s.verified[t]={};
+  s.verified[t][type]=!s.verified[t][type];
+  logSanctionHist(s, s.verified[t][type]?'verifie':'deverifie', type);
+  save(); render();
+}
+
+/* ====================================================================
+   BESONS PARTICULIERS (types configurables, couleur uniforme par type)
+==================================================================== */
+function getNeedType(key){ return state.needTypes.find(n=>n.key===key); }
+function getNeeds(s){ return s.needs||[]; }
+function hasNeeds(s){ return getNeeds(s).length>0; }
+function toggleNeedStudent(s,key){
+  if(!s.needs) s.needs=[];
+  const i=s.needs.indexOf(key);
+  if(i>=0) s.needs.splice(i,1); else s.needs.push(key);
+  save(); render();
+}
+// Couleur uniforme: on prend la couleur du premier type de besoin de l'élève.
+// Ainsi tous les PAP partagent la même couleur, tous les PAI la même, etc.
+function needColorFor(s){
+  const needs=getNeeds(s);
+  if(needs.length===0) return DEFAULT_NEED_COLOR;
+  const nt=getNeedType(needs[0]);
+  return nt ? nt.color : DEFAULT_NEED_COLOR;
+}
+// Emojis affichés sur le plan (jusqu'aux 2 premiers besoins)
+function needEmojisFor(s,max){
+  const needs=getNeeds(s); const n=max||2;
+  const out=[];
+  for(let i=0;i<Math.min(n,needs.length);i++){
+    const nt=getNeedType(needs[i]);
+    out.push(nt?nt.emoji:'♿');
+  }
+  if(out.length===0) out.push('♿');
+  return out;
+}
+function needEmojiFor(s){ return needEmojisFor(s,1)[0]; }
+function needsLabelFor(s){
+  return getNeeds(s).map(k=>{ const nt=getNeedType(k); return nt?nt.label:k; }).join(' · ');
+}
+
+/* ====================================================================
+   RENDU — Plan de classe
+==================================================================== */
+let dragData=null;
+
+function renderPlan(){
+  const L=activeLayout(); if(!L) return;
+  const sg=isSubgroupView();
+  const list=activeStudents();
+  const grid=document.getElementById('deskGrid');
+  grid.style.gridTemplateColumns=`repeat(${L.cols},minmax(110px,max-content))`;
+  grid.style.gridTemplateRows=`repeat(${L.rows},auto)`;
+  if(L.gapX) grid.style.columnGap=L.gapX+'px';
+  if(L.gapY) grid.style.rowGap=L.gapY+'px';
+  grid.innerHTML='';
+
+  const desks=[...L.desks].sort((a,b)=>a.row===b.row?a.col-b.col:a.row-b.row);
+  desks.forEach(desk=>{
+    const el=document.createElement('div'); el.className='desk'; el.dataset.deskId=desk.id;
+    if(state.selectedDeskId===desk.id) el.classList.add('selected');
+    const lbl=document.createElement('div'); lbl.className='desk-label'; lbl.textContent=desk.label; el.appendChild(lbl);
+
+    const nb=desk.seats||2;
+    const seatsWrap=document.createElement('div');
+    seatsWrap.className='seats'+(desk.orientation==='vertical'?' vertical':'');
+    for(let si=0;si<nb;si++){
+      const seat=document.createElement('div'); seat.className='seat'; seat.dataset.deskId=desk.id; seat.dataset.seatIndex=si;
+      if(desk.seatDisabled[si]) seat.classList.add('disabled');
+      const occ=occupantAt(desk.id,si);
+      if(occ && !desk.seatDisabled[si]){
+        const stEl=document.createElement('div'); stEl.className='student'; stEl.draggable=true; stEl.dataset.studentId=occ.id;
+        // anneau couleur besoin particulier
+        if(hasNeeds(occ) && state.settings.needMode==='color'){
+          stEl.style.setProperty('--need-color', needColorFor(occ));
+          stEl.classList.add('need-ring');
+        }
+        // flags punition
+        const prop=punitionProposed(occ);
+        const motV=hasValidated(occ,'mot'), punV=hasValidated(occ,'punition');
+        const motOk=hasVerified(occ,'mot'), punOk=hasVerified(occ,'punition');
+        let flag='';
+        if(!(motOk||punOk)){ // une fois vérifié, plus d'icône sur le plan (reste dans l'historique)
+          if(motV||punV) flag=`<span class="punition-flag" title="Validé (à vérifier)">!</span>`;
+          else if(prop) flag=`<span class="punition-flag ${prop.level==='mot'?'warn':''}" title="Proposition: ${prop.label}">?</span>`;
+        }
+        // badge besoin
+        let needBadge='';
+        if(hasNeeds(occ) && state.settings.needMode==='emoji'){
+          needBadge='<span class="need-badges">'+needEmojisFor(occ,getNeeds(occ).length).map((em,i)=>{
+            const nt=getNeedType(getNeeds(occ)[i]);
+            return `<span class="need-badge emoji" title="Besoin particulier: ${nt?nt.label:''}">${em}</span>`;
+          }).join('')+'</span>';
+        }
+        stEl.innerHTML=`${flag}${needBadge}<span class="sname">${escapeHtml(occ.name)}</span>`;
+        if(state.selectedStudentId===occ.id) stEl.innerHTML+=`<span class="sel-dot"></span>`;
+        // indicateurs cliquables
+        const inds=document.createElement('div'); inds.className='indicators';
+        for(const ind of allIndicators()){
+          if(!isIndShownOnPlan(ind.key)) continue; // indicateur masqué sur le plan
+          const v=getTracker(occ,ind.key);
+          const span=document.createElement('span');
+          span.className='ind'+(v===0?' zero':'');
+          span.title=ind.label+' : '+v+' (clic = +1, ctrl+clic = -1)';
+          span.style.background=ind.bg; span.style.color=ind.color;
+          span.textContent=ind.emoji+(v>0?v:'');
+          span.addEventListener('click',e=>{ e.stopPropagation(); e.preventDefault(); const delta=e.ctrlKey||e.metaKey?-1:1; incTracker(occ,ind.key,delta); save(); render(); });
+          inds.appendChild(span);
+        }
+        stEl.appendChild(inds);
+        stEl.addEventListener('dragstart',e=>{
+          dragData={studentId:occ.id, fromDesk:desk.id, fromIndex:si};
+          stEl.classList.add('dragging'); e.dataTransfer.effectAllowed='move';
+          try{e.dataTransfer.setData('text/plain',occ.id);}catch(_){}
+        });
+        stEl.addEventListener('dragend',()=>{ stEl.classList.remove('dragging'); clearDropTargets(); dragData=null; });
+        stEl.addEventListener('click',e=>{
+          if(e.target.closest('.ind')||e.target.closest('.punition-flag')||e.target.closest('.need-badge')) return;
+          e.stopPropagation(); if(!dragData) selectStudent(occ.id);
+        });
+        stEl.addEventListener('dblclick',e=>{ e.stopPropagation(); renameStudent(occ.id); });
+        seat.appendChild(stEl);
+      }
+      if(!desk.seatDisabled[si]){
+        seat.addEventListener('dragover',e=>{ e.preventDefault(); seat.classList.add('drop-target'); });
+        seat.addEventListener('dragleave',()=> seat.classList.remove('drop-target'));
+        seat.addEventListener('drop',e=>{ e.preventDefault(); seat.classList.remove('drop-target'); if(dragData) moveStudent(dragData.studentId,desk.id,si); });
+        seat.addEventListener('click',()=>{ if(!dragData){ state.selectedStudentId=null; state.selectedDeskId=desk.id; save(); render(); } });
+      }
+      seatsWrap.appendChild(seat);
+    }
+    el.appendChild(seatsWrap);
+    grid.appendChild(el);
+  });
+
+  const board=document.getElementById('boardEl');
+  board.style.display=L.board.visible?'':'none';
+  board.textContent='📌 '+(L.board.label||'Tableau');
+  const prof=document.getElementById('profDeskEl');
+  prof.style.display=L.prof.visible?'':'none';
+  prof.textContent='🧑‍🏫 '+(L.prof.label||'Bureau du Professeur');
+
+  // ---- barre des élèves non placés ----
+  const bar=document.getElementById('unplacedBar');
+  if(bar){
+    let unplaced=[];
+    if(sg){
+      const sgView=activeView();
+      const assignedIds=new Set((sgView.assignments||[]).map(a=>a.studentId));
+      // élèves des classes source non inclus dans le sous-groupe
+      (sgView.sourceClassIds||Object.keys(state.classes)).forEach(cid=>{
+        const c=state.classes[cid]; if(!c) return;
+        c.students.forEach(s=>{ if(!assignedIds.has(s.id)) unplaced.push(s); });
+      });
+    } else {
+      unplaced=list.filter(s=>!s.seat);
+    }
+    if(unplaced.length===0){
+      bar.classList.remove('show'); bar.innerHTML='';
+    } else {
+      bar.classList.add('show');
+      const chips=unplaced.map(s=>{
+        const chip=document.createElement('div');
+        chip.className='uchip'; chip.draggable=true; chip.dataset.studentId=s.id;
+        const sexTag=s.sex?`<span class="ustag" style="color:${s.sex==='M'?'#2563eb':'#db2777'}">${s.sex}</span>`:'';
+        chip.innerHTML=`${escapeHtml(s.name)}${sexTag}`;
+        chip.addEventListener('dragstart',e=>{
+          dragData={studentId:s.id, fromDesk:null, fromIndex:null};
+          chip.classList.add('dragging'); e.dataTransfer.effectAllowed='move';
+          try{e.dataTransfer.setData('text/plain',s.id);}catch(_){}
+        });
+        chip.addEventListener('dragend',()=>{ chip.classList.remove('dragging'); clearDropTargets(); dragData=null; });
+        chip.addEventListener('click',()=>{ selectStudent(s.id); });
+        chip.addEventListener('dblclick',()=>{ renameStudent(s.id); });
+        return chip;
+      });
+      bar.innerHTML=`<div class="utitle">🪑 ${unplaced.length} élève(s) non placé(s) — glissez vers une place libre, ou relâchez un élève ici pour le libérer</div><div class="uchips"></div>`;
+      const wrap=bar.querySelector('.uchips');
+      chips.forEach(c=>wrap.appendChild(c));
+    }
+  }
+}
+function clearDropTargets(){ document.querySelectorAll('.seat.drop-target').forEach(s=>s.classList.remove('drop-target')); }
+
+function moveStudent(studentId,deskId,index){
+  const s=findStudent(studentId); if(!s) return;
+  if(isSubgroupView()){
+    // sous-groupe : on gère les places dans sg.assignments (l'élève garde son siège dans sa classe)
+    const sg=activeView();
+    const desk=sg.layout.desks.find(d=>d.id===deskId);
+    if(!desk||desk.seatDisabled[index]){ toast('Place indisponible'); return; }
+    const owner=findStudentClass(studentId);
+    if(!owner) return;
+    // retirer l'élève de toute place qu'il occupe déjà
+    sg.assignments=sg.assignments.filter(a=>a.studentId!==studentId);
+    // si la place cible est occupée, on la libère (l'occupant est déplacé manuellement)
+    sg.assignments=sg.assignments.filter(a=>!(a.deskId===deskId&&a.index===index));
+    sg.assignments.push({deskId,index,classId:owner.id,studentId});
+    save(); render(); toast('Sous-groupe mis à jour'); return;
+  }
+  const cls=currentClass(); const desk=cls.layout.desks.find(d=>d.id===deskId);
+  if(!desk||desk.seatDisabled[index]){ toast('Place indisponible'); return; }
+  const existing=cls.students.find(x=>x.id!==studentId&&x.seat&&x.seat.deskId===deskId&&x.seat.index===index);
+  if(existing){ existing.seat = s.seat ? { deskId:s.seat.deskId, index:s.seat.index } : null; }
+  s.seat={deskId,index}; save(); render(); toast('Plan mis à jour');
+}
+function selectStudent(id){ state.selectedStudentId=id; state.selectedDeskId=null; save(); render(); }
+
+/* ====================================================================
+   RENDU — Sidebar élève
+==================================================================== */
+function renderSidebar(){
+  const root=document.getElementById('sidebarContent');
+  const sid=state.selectedStudentId;
+  if(!sid){ root.innerHTML=welcomePanel(); updateFsCard(null); return; }
+  const s=findStudent(sid);
+  if(!s){ state.selectedStudentId=null; root.innerHTML=welcomePanel(); updateFsCard(null); return; }
+  const prop=punitionProposed(s);
+  const motV=hasValidated(s,'mot'), punV=hasValidated(s,'punition');
+  const motOk=hasVerified(s,'mot'), punOk=hasVerified(s,'punition');
+  const note=implicationNote(s);
+  const needs=getNeeds(s);
+  const owner=findStudentClass(s.id);
+  const ownerName = owner ? owner.name : '—';
+  const showOwner = isSubgroupView() || (owner && owner.id!==state.currentClassId);
+
+  let html=`<div class="panel"><div class="student-card">
+    <div class="sc-head">
+      <div>
+        <div class="sc-name" title="Cliquer pour renommer" onclick="renameStudent('${s.id}')">${escapeHtml(s.name)}</div>
+        <div class="muted">Trimestre ${state.activeTrimester}${showOwner?` · 📚 ${escapeHtml(ownerName)}`:''}</div>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="icon ghost" onclick="renameStudent('${s.id}')" title="Renommer">✏️</button>
+        <button class="icon ghost" onclick="removeStudent('${s.id}')" title="Supprimer">🗑️</button>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:6px">
+      <span style="font-size:12px;font-weight:600;color:var(--ink2)">Sexe :</span>
+      <span class="chip ${s.sex==='M'?'on':''}" style="${s.sex==='M'?'background:#2563eb;border-color:#1d4ed8;color:#fff':''}" onclick="event.stopPropagation();setStudentSex('${s.id}','M')">M</span>
+      <span class="chip ${s.sex==='F'?'on':''}" style="${s.sex==='F'?'background:#db2777;border-color:#be185d;color:#fff':''}" onclick="event.stopPropagation();setStudentSex('${s.id}','F')">F</span>
+    </div>
+    <div class="kv"><span>🎯 Note d'implication</span><b>${note}/20</b></div>
+    <div class="chips" style="margin:8px 0">`;
+  TRIMESTERS.forEach(t=> html+=`<span class="chip ${state.activeTrimester===t?'on':''}" onclick="event.stopPropagation();setTrimester('${t}')">${t}</span>`);
+  html+=`</div>`;
+
+  // ----- Besoins particuliers -----
+  html+=`<div class="divider"></div><div style="font-size:12px;font-weight:700;color:#5b21b6;margin-bottom:4px">♿ Besoins particuliers</div>`;
+  if(state.needTypes.length===0){
+    html+=`<div class="muted" style="font-size:12px">Aucun type défini. Ajoutez-en dans ⚙️ Personnalisation.</div>`;
+  }else{
+    html+=`<div class="need-sel">`;
+    state.needTypes.forEach(nt=>{
+      const on=needs.includes(nt.key);
+      const bg = on ? nt.color : '';
+      const fg = on ? '#fff' : '';
+      html+=`<span class="chip ${on?'on':''}" style="${on?`background:${nt.color};border-color:${nt.color};color:#fff`:''}" onclick="event.stopPropagation();toggleNeed('${s.id}','${nt.key}')" title="${nt.label}">${nt.emoji} ${nt.label}</span>`;
+    });
+    html+=`</div>`;
+  }
+  if(needs.length>0){
+    html+=`<div class="need-box"><b>${needsLabelFor(s)}</b><br>
+      <span class="muted">Affiché sur le plan : ${state.settings.needMode==='emoji'?'icône '+needEmojiFor(s):'anneau coloré '+needColorFor(s)}</span><br>
+      <span class="muted">La couleur est uniforme selon le type de besoin (modifiable dans ⚙️).</span>
+    </div>`;
+  }else{
+    html+=`<div class="muted" style="font-size:12px;margin-top:4px">Aucun besoin particulier signalé.</div>`;
+  }
+
+  // ----- Sanctions -----
+  html+=`<div class="divider"></div><div style="font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px">📋 Sanctions</div>`;
+  if(prop){
+    html+=`<div class="warn-box" style="${prop.level==='punition'?'background:var(--badbg);border-color:#fca5a5;color:#991b1b':''}">
+      <b>${prop.emoji} Proposition : ${prop.label}</b><br><span class="muted">${prop.detail}</span>
+    </div>`;
+  }else{
+    html+=`<div class="muted" style="font-size:12px">Aucune sanction proposée pour le moment.</div>`;
+  }
+  // Boutons: validation
+  html+=`<div class="row" style="margin-top:8px">
+    <button class="sm" style="${motV?'background:var(--warn);color:#fff;border-color:#b45309':''}" onclick="toggleValidated('${s.id}','mot')">${motV?'✓ ':''}📒 Mot validé</button>
+    <button class="sm" style="${punV?'background:var(--bad);color:#fff;border-color:#b91c1c':''}" onclick="toggleValidated('${s.id}','punition')">${punV?'✓ ':''}📄 Punition validée</button>
+  </div>`;
+  // Boutons: vérification (uniquement si validé)
+  if(motV||punV){
+    html+=`<div class="row" style="margin-top:6px">
+      ${motV?`<button class="sm" style="${motOk?'background:var(--good);color:#fff;border-color:#15803d':''}" onclick="toggleVerified('${s.id}','mot')">${motOk?'✓ ':''}Mot vérifié</button>`:''}
+      ${punV?`<button class="sm" style="${punOk?'background:var(--good);color:#fff;border-color:#15803d':''}" onclick="toggleVerified('${s.id}','punition')">${punOk?'✓ ':''}Punition vérifiée</button>`:''}
+    </div>
+    <div class="muted" style="font-size:11px;margin-top:4px">Valider puis vérifier retire le signalement sur le plan une fois vérifié.</div>`;
+  }
+
+  html+=`<div class="divider"></div>`;
+  // ----- Historique horodaté des saisies -----
+  const hist=studentHist(s);
+  const indByKey={}; allIndicators().forEach(i=>indByKey[i.key]=i);
+  html+=`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><div style="font-size:12px;font-weight:700;color:var(--ink2)">🕘 Historique des saisies</div>
+    <span class="muted" style="font-size:11px">(T${state.activeTrimester.slice(1)})</span>
+    ${hist.length>0?`<button class="icon ghost" style="margin-left:auto" onclick="clearStudentHist('${s.id}')" title="Effacer l'historique du trimestre">🗑️</button>`:''}
+  </div>`;
+  if(hist.length===0){
+    html+=`<div class="muted" style="font-size:12px">Aucune saisie enregistrée ce trimestre.</div>`;
+  }else{
+    html+=`<div class="hist-list">`+hist.map(h=>{
+      const ind=indByKey[h.k];
+      let emoji,label,extra='';
+      if(h.k.startsWith('__')){ // événement de sanction (mot / punition)
+        const parts=h.k.slice(2).split('_'); const evt=parts[0]==='refus'?'refus':parts[0]; const sType=parts[1]==='punition'?'punition':(parts.slice(1).join('_')||'');
+        emoji=sType==='mot'?'📒':'📄';
+        if(evt==='refus'){ emoji='🚫'; label='Punition refusée (oublis répétés)'; }
+        else{
+          const sName=sType==='mot'?'Mot dans le carnet':'Punition';
+          const verbs={valide:'validé',annule:'annulé',verifie:'vérifié',deverifie:'dé-vérifié'};
+          label=sName+' '+((verbs[evt]||evt));
+        }
+        extra=` style="color:${evt==='annule'||evt==='deverifie'?'#dc2626':(evt==='verifie'?'#16a34a':(evt==='refus'?'#7c3aed':'#b45309'))}"`;
+      }else{ emoji=ind?ind.emoji:'•'; label=ind?ind.label:h.k; }
+      return `<div class="hist-row"><span${extra}>${emoji} ${escapeHtml(label)}</span>${h.d!==0?`<b class="${h.d>0?'plus':'minus'}">${h.d>0?'+':''}${h.d}</b>`:''}<span class="muted" style="font-size:11px">${histFmt(h.ts)}</span></div>`;
+    }).join('')+`</div>`;
+  }
+
+  // compteurs
+  html+=`<div class="counter-grid">`;
+  for(const ind of allIndicators()){
+    const v=getTracker(s,ind.key);
+    html+=`<div class="counter">
+      <div><div class="lbl">${ind.emoji} ${ind.label}</div><div class="val" style="color:${ind.color}">${v}</div></div>
+      <div class="btns"><button class="minus" onclick="inc('${s.id}','${ind.key}',-1)">−</button><button class="plus" onclick="inc('${s.id}','${ind.key}',1)">+</button></div>
+    </div>`;
+  }
+  html+=`</div></div></div>`;
+  root.innerHTML=html;
+  // miroir pour l'affichage en plein écran (fiche en bas du plan)
+  updateFsCard(html);
+}
+// Met à jour la fiche élève affichée en bas du plan en plein écran.
+// html=null → masque la fiche (aucun élève sélectionné).
+function updateFsCard(html){
+  const fsCard=document.getElementById('fsStudentCard'); if(!fsCard) return;
+  const sid=state.selectedStudentId;
+  if(html==='keep'){ // conserver le contenu, ajuster seulement la visibilité
+    fsCard.classList.toggle('show', !!(sid && isPlanFullscreen()));
+    return;
+  }
+  if(!html || !sid || !isPlanFullscreen()){
+    fsCard.classList.remove('show');
+    if(!sid) fsCard.innerHTML='';
+    return;
+  }
+  const h=+state.settings.fsCardH||15;
+  fsCard.innerHTML=`<div class="fs-card-tools">
+    <button class="icon ghost" onclick="fsCardStep(-5)" title="Réduire la fiche (-5%)">⌄</button>
+    <button class="icon ghost" onclick="fsCardStep(5)" title="Agrandir la fiche (+5%)">⌃</button>
+    <b class="muted" style="font-size:11px;align-self:center">${h}%</b>
+    <button class="icon ghost" onclick="closeFsCard()" title="Fermer la fiche">✕</button>
+  </div>`+html;
+  fsCard.style.maxHeight=h+'vh';
+  fsCard.classList.add('show');
+}
+
+function welcomePanel(){
+  const sg=isSubgroupView();
+  return `<div class="panel">
+    <h2>👋 Bienvenue</h2>
+    <p class="muted">Sélectionnez un élève (plan ou liste) pour suivre ses indicateurs.</p>
+    <div class="divider"></div>
+    <h2>📈 Aperçu — ${escapeHtml(activeName())}</h2>
+    ${classOverview()}
+    <div class="divider"></div>
+    <div class="hint-box"><b>Astuces :</b><br>
+    • Cliquez les icônes sous un élève pour +1 (Ctrl = -1)<br>
+    • Double-cliquez un nom pour le modifier<br>
+    • Onglet Disposition : U, îlots, orientation, nb de places${sg?'<br>• Sous-groupe : les indicateurs remontent dans la classe d\'origine de l\'élève':''}<br>
+    • ⚙️ : réglez les couleurs, les seuils de sanctions, le mode besoins particuliers</div>
+  </div>`;
+}
+function classOverview(){
+  const list=activeStudents(); const n=list.length;
+  let totP=0,totB=0,totO=0,totE=0;
+  list.forEach(s=>{ totP+=getTracker(s,'participation'); totB+=getTracker(s,'bavardage'); totO+=oublisTotal(s); totE+=getTracker(s,'encouragement'); });
+  const nbNeed=list.filter(s=>hasNeeds(s)).length;
+  const nbM=list.filter(s=>s.sex==='M').length;
+  const nbF=list.filter(s=>s.sex==='F').length;
+  return `<div class="stat-grid">
+    <div class="stat"><div class="n">${n}</div><div class="l">Élèves</div></div>
+    <div class="stat"><div class="n" style="color:#2563eb">${nbM} M</div><div class="l">Garçons</div></div>
+    <div class="stat"><div class="n" style="color:#db2777">${nbF} F</div><div class="l">Filles</div></div>
+    <div class="stat"><div class="n" style="color:#2563eb">${totP}</div><div class="l">🙋 Participations</div></div>
+    <div class="stat"><div class="n" style="color:#7c3aed">${totB}</div><div class="l">💬 Bavardages</div></div>
+    <div class="stat"><div class="n" style="color:#dc2626">${totO}</div><div class="l">🎒📝 Oublis</div></div>
+    <div class="stat"><div class="n" style="color:#16a34a">${totE}</div><div class="l">⭐ Encouragements</div></div>
+  </div>`;
+}
+
+/* ====================================================================
+   RENDU — Liste élèves
+==================================================================== */
+function renderStudentList(){
+  const root=document.getElementById('studentList');
+  const sg=isSubgroupView();
+  const list=activeStudents();
+  const q=(document.getElementById('searchInput')?.value||'').toLowerCase();
+  const filtered=list.filter(s=>!q||s.name.toLowerCase().includes(q));
+  if(filtered.length===0){ root.innerHTML=`<div class="muted" style="padding:14px;text-align:center">Aucun élève${q?' trouvé':''}.${sg?' Utilisez l\'onglet Disposition pour affecter des élèves au sous-groupe.':''}</div>`; return; }
+  root.innerHTML=filtered.map(s=>{
+    const p=getTracker(s,'participation'), b=getTracker(s,'bavardage');
+    const prop=punitionProposed(s);
+    const flag=hasVerified(s,'mot')||hasVerified(s,'punition')?'✓':(hasValidated(s,'mot')||hasValidated(s,'punition')?'!':(prop?'?':''));
+    const need=hasNeeds(s)&&state.settings.needMode!=='none'?(state.settings.needMode==='emoji'?needEmojiFor(s):'●'):'';
+    const needStyle=hasNeeds(s)&&state.settings.needMode==='color'?`style="color:${needColorFor(s)}"`:'';
+    const owner=findStudentClass(s.id);
+    const ownerTag = sg && owner ? `<small class="tag" style="color:var(--ink2)">${escapeHtml(owner.name)}</small> ` : '';
+    return `<div class="eitem ${state.selectedStudentId===s.id?'selected':''}" onclick="selectStudent('${s.id}')">
+      <div class="nm">${ownerTag}${s.sex?`<small class="tag" style="${s.sex==='M'?'color:#2563eb':'color:#db2777'}">${s.sex}</small> `:''}${escapeHtml(s.name)} ${need?`<span ${needStyle}>${need}</span>`:''} ${flag?`<span class="punition-flag ${prop&&prop.level==='mot'?'warn':(flag==='✓'?'ok':'')}" style="position:static;display:inline-flex;width:16px;height:16px;font-size:9px;margin-left:2px">${flag}</span>`:''}</div>
+      <span class="ct">🙋${p} 💬${b}</span>
+      <button class="icon ghost rename" onclick="event.stopPropagation();renameStudent('${s.id}')" title="Renommer">✏️</button>
+    </div>`;
+  }).join('');
+}
+
+/* ====================================================================
+   RENDU — Statistiques
+==================================================================== */
+function statsSortMark(key){
+  const cur=state.statsSort||'note';
+  if(cur!==key) return '';
+  return key==='note'?'▼':'▲';
+}
+window.setStatsSort=function(key){
+  state.statsSort = (state.statsSort||'note')===key ? 'note' : key;
+  save(); renderStats();
+};
+function sortKeyName(s){
+  const m = s.name.match(/([A-ZÀ-Ý]{2,})/);
+  if(m) return m[1];
+  const parts = s.name.trim().split(/\s+/);
+  return parts[parts.length-1].toUpperCase();
+}
+function renderStats(){
+  const root=document.getElementById('statsPanel');
+  const sg=isSubgroupView();
+  const list=activeStudents();
+  if(list.length===0){ root.innerHTML=`<div class="empty-state"><span class="big">📊</span>Aucun élève.${sg?' Affectez des élèves au sous-groupe pour voir les statistiques.':''}</div>`; return; }
+  const n=list.length;
+  let totP=0,totB=0,totO=0,totE=0; const notes=[];
+  list.forEach(s=>{ totP+=getTracker(s,'participation'); totB+=getTracker(s,'bavardage'); totO+=oublisTotal(s); totE+=getTracker(s,'encouragement'); notes.push(implicationNote(s)); });
+  const avgNote=(notes.reduce((a,b)=>a+b,0)/notes.length).toFixed(1);
+  const maxNote=Math.max(...notes), minNote=Math.min(...notes);
+  const props=list.filter(s=>punitionProposed(s)&&!hasValidated(s,punitionProposed(s).level)).length;
+  const valides=list.filter(s=>hasValidated(s,'mot')||hasValidated(s,'punition')).length;
+  const verifies=list.filter(s=>hasVerified(s,'mot')||hasVerified(s,'punition')).length;
+  const nbNeed=list.filter(s=>hasNeeds(s)).length;
+  const nbM=list.filter(s=>s.sex==='M').length;
+  const nbF=list.filter(s=>s.sex==='F').length;
+
+  let html=`<h2>📊 Statistiques — ${escapeHtml(activeName())} <span class="muted">(${state.activeTrimester})</span></h2>
+  <div class="chips" style="margin-bottom:10px">`;
+  TRIMESTERS.forEach(t=> html+=`<span class="chip ${state.activeTrimester===t?'on':''}" onclick="event.stopPropagation();setTrimester('${t}')">${t}</span>`);
+  html+=`</div>
+  <div class="stat-grid">
+    <div class="stat"><div class="n">${n}</div><div class="l">Élèves</div></div>
+    <div class="stat"><div class="n" style="color:#16a34a">${avgNote}/20</div><div class="l">Implication moyenne</div></div>
+    <div class="stat"><div class="n" style="color:#2563eb">${nbM}</div><div class="l">Garçons (M)</div></div>
+    <div class="stat"><div class="n" style="color:#db2777">${nbF}</div><div class="l">Filles (F)</div></div>
+    <div class="stat"><div class="n" style="color:#2563eb">${totP}</div><div class="l">🙋 Participations</div></div>
+    <div class="stat"><div class="n" style="color:#7c3aed">${totB}</div><div class="l">💬 Bavardages</div></div>
+    <div class="stat"><div class="n" style="color:#dc2626">${totO}</div><div class="l">🎒📝 Oublis</div></div>
+    <div class="stat"><div class="n" style="color:#16a34a">${totE}</div><div class="l">⭐ Encouragements</div></div>
+  </div>
+  <div class="divider"></div>
+  <div class="row" style="margin-bottom:10px">
+    <span class="badge warn">? ${props} proposition(s)</span>
+    <span class="badge bad">! ${valides} validée(s)</span>
+    <span class="badge good">✓ ${verifies} vérifiée(s)</span>
+    <span class="badge info">♿ ${nbNeed} besoin(s) particulier(s)</span>
+  </div>
+  <h3 style="margin:14px 0 8px;font-size:14px">Classement par implication</h3>
+  <p class="muted" style="margin-bottom:6px">Cliquez sur « Élève » ou « Note » pour changer le tri.</p>
+  <table class="stats"><thead><tr><th>#</th><th class="sortable" onclick="setStatsSort('name')">Élève ${statsSortMark('name')}</th>${sg?'<th>Classe</th>':''}<th>Sexe</th><th>Besoin</th><th>🙋</th><th>💬</th><th>🎒</th><th>📝</th><th>⭐</th><th class="sortable" onclick="setStatsSort('note')">Note ${statsSortMark('note')}</th><th>Sanction</th></tr></thead><tbody>`;
+  const sortKey=state.statsSort||'note';
+  const sorted=[...list].sort((a,b)=>{
+    if(sortKey==='name') return sortKeyName(a).localeCompare(sortKeyName(b),'fr');
+    return implicationNote(b)-implicationNote(a);
+  });
+  sorted.forEach((s,i)=>{
+    const prop=punitionProposed(s);
+    let sig='';
+    const owner=findStudentClass(s.id);
+    const vMot=hasVerified(s,'mot'), vPun=hasVerified(s,'punition');
+    const valMot=hasValidated(s,'mot'), valPun=hasValidated(s,'punition');
+    if(vMot||vPun) sig+='<span class="badge good">✓</span>';
+    else if(valMot||valPun) sig+='<span class="badge bad">!</span>';
+    else if(prop) sig+=`<span class="badge ${prop.level==='mot'?'warn':'bad'}">?</span>`;
+    const needTag=hasNeeds(s)?getNeeds(s).map(k=>{
+      const nt=getNeedType(k);
+      return `<span class="badge info" title="${nt?nt.label:k}">${nt?nt.emoji:'♿'}</span>`;
+    }).join(' '):'—';
+    const sexTag=s.sex?`<span class="badge ${s.sex==='M'?'info':''}" style="${s.sex==='M'?'':'background:#fce7f3;color:#be185d'}">${s.sex}</span>`:'—';
+    const classTag = sg && owner ? `<td><small class="tag" style="color:var(--ink2)">${escapeHtml(owner.name)}</small></td>` : '';
+    html+=`<tr><td>${i+1}</td><td class="name">${escapeHtml(s.name)}</td>${classTag}<td>${sexTag}</td><td>${needTag}</td>
+      <td>${getTracker(s,'participation')}</td><td>${getTracker(s,'bavardage')}</td>
+      <td>${getTracker(s,'materiel')}</td><td>${getTracker(s,'devoirs')}</td>
+      <td>${getTracker(s,'encouragement')}</td><td><b>${implicationNote(s)}</b></td><td>${sig||'—'}</td></tr>`;
+  });
+  html+=`</tbody></table>`;
+  root.innerHTML=html;
+}
+
+/* ====================================================================
+   RENDU — Disposition
+==================================================================== */
+function renderLayoutPanel(){
+  const root=document.getElementById('layoutPanel');
+  const V=activeView(); const L=V.layout; const curPreset=V.layoutPreset||'custom';
+  const sg=isSubgroupView();
+  const allSeats = L.desks.length && L.desks.every(d=>(d.seats||2)===(L.desks[0].seats||2)) ? (L.desks[0].seats||2) : 0;
+  let html=`<h2>📐 Disposition — ${escapeHtml(V.name)}</h2>
+  <p class="muted">${sg?'Disposition du sous-groupe. Les élèves proviennent de plusieurs classes mais restent rattachés à leur classe d\'origine.':'Choisir un modèle réassigne les élèves (sans perte de données). Chaque bureau est réglable individuellement : orientation et nombre de places (1 à 4).'}</p>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">Modèles prédéfinis</h3>
+  <div class="layout-grid3">`;
+  Object.entries(LAYOUT_PRESETS).forEach(([key,p])=>{
+    html+=`<div class="preset-card ${curPreset===key?'active':''}" onclick="applyPreset('${key}')">
+      <div class="pt">${p.label}</div><div class="pd">${p.desc}</div>${presetMini(key)}
+    </div>`;
+  });
+  html+=`</div>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">Réglages manuels</h3>
+  <div class="row">
+    <div class="field"><label>Colonnes</label><input type="number" min="1" max="10" value="${L.cols}" onchange="changeGrid('cols',this.value)" style="width:70px"></div>
+    <div class="field"><label>Rangées</label><input type="number" min="1" max="10" value="${L.rows}" onchange="changeGrid('rows',this.value)" style="width:70px"></div>
+    <div class="field"><label>Places / bureau</label>
+      <select onchange="setAllSeats(this.value)" style="width:90px">
+        ${[1,2,3,4].map(n=>`<option value="${n}" ${allSeats===n?'selected':''}>${n} place${n>1?'s':''}</option>`).join('')}
+      </select>
+    </div>
+    <span class="muted">Redimensionner réassigne les élèves (sans perte).</span>
+  </div>
+  <div class="divider"></div>
+  <div class="layout-grid2">
+    <div>
+      <h3 style="font-size:14px">Tableau</h3>
+      <div class="row"><input value="${L.board.label}" oninput="updateBoard('label',this.value)"></div>
+      <label class="row center" style="gap:6px;margin-top:6px"><input type="checkbox" ${L.board.visible?'checked':''} onchange="updateBoard('visible',this.checked)"> Visible</label>
+    </div>
+    <div>
+      <h3 style="font-size:14px">Bureau prof</h3>
+      <div class="row"><input value="${L.prof.label}" oninput="updateProf('label',this.value)"></div>
+      <label class="row center" style="gap:6px;margin-top:6px"><input type="checkbox" ${L.prof.visible?'checked':''} onchange="updateProf('visible',this.checked)"> Visible</label>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">Réglage des bureaux</h3>
+  <p class="muted">Cliquez une place = (in)disponible • Double-cliquez un bureau = tout basculer • Réglez orientation & places via les boutons.</p>
+  <div class="desk-grid" id="layoutGrid"></div>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">Renommer les bureaux</h3>
+  <div id="renameDesks"></div>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">🔀 Sous-groupes (regroupements multi-classes)</h3>
+  <p class="muted">Créez des sous-groupes pour les heures d'expérience : mélangez les élèves de plusieurs classes en N sous-groupes. L'élève reste rattaché à sa classe d'origine — participation, oublis, bavardages et sanctions remontent automatiquement dans sa fiche élève.</p>
+  ${sgSubgroupsSection()}
+  <div class="row" style="margin-top:8px">
+    <button id="createSubgroupBtn" class="primary" onclick="openCreateSubgroupModal()">➕ Créer un sous-groupe</button>
+  </div>`;
+  root.innerHTML=html;
+  const lg=document.getElementById('layoutGrid');
+  lg.style.gridTemplateColumns=`repeat(${L.cols},minmax(80px,1fr))`;
+  const desks=[...L.desks].sort((a,b)=>a.row===b.row?a.col-b.col:a.row-b.row);
+  desks.forEach(d=>{
+    const el=document.createElement('div'); el.className='desk';
+    const lbl=document.createElement('div'); lbl.className='desk-label'; lbl.textContent=d.label; el.appendChild(lbl);
+    const seats=document.createElement('div'); seats.className='seats'+(d.orientation==='vertical'?' vertical':'');
+    const nb=d.seats||2;
+    for(let si=0;si<nb;si++){
+      const seat=document.createElement('div'); seat.className='seat'+(d.seatDisabled[si]?' disabled':'');
+      seat.style.minHeight='40px'; seat.style.cursor='pointer'; seat.title='Clic = (in)disponible';
+      seat.onclick=()=>{
+        d.seatDisabled[si]=!d.seatDisabled[si];
+        if(d.seatDisabled[si]) freeSeatInView(activeView(),d.id,si+1);
+        save(); renderLayoutPanel(); renderPlan();
+      };
+      seats.appendChild(seat);
+    }
+    el.appendChild(seats);
+    // contrôles bureau
+    const ctrl=document.createElement('div');
+    ctrl.style.cssText='display:flex;gap:3px;justify-content:center;margin-top:6px;flex-wrap:wrap';
+    ctrl.innerHTML=`
+      <button class="sm ghost" style="border:1px solid var(--border)" onclick="event.stopPropagation();toggleOrientation('${d.id}')" title="Basculer orientation">↔️ ${d.orientation==='horizontal'?'H':'V'}</button>
+      <button class="sm ghost" style="border:1px solid var(--border)" onclick="event.stopPropagation();changeSeats('${d.id}',-1)" title="Moins de places">−</button>
+      <span class="muted" style="font-size:11px;align-self:center">${nb} place${nb>1?'s':''}</span>
+      <button class="sm ghost" style="border:1px solid var(--border)" onclick="event.stopPropagation();changeSeats('${d.id}',1)" title="Plus de places">+</button>`;
+    el.appendChild(ctrl);
+    el.style.cursor='pointer'; el.title='Double-clic pour (dés)activer tout le bureau';
+    el.ondblclick=()=>{
+      d.disabled=!d.disabled;
+      if(d.disabled){ d.seatDisabled=Array.from({length:nb},()=>true); freeSeatInView(activeView(),d.id,0); }
+      save(); renderLayoutPanel(); renderPlan();
+    };
+    lg.appendChild(el);
+  });
+  const rd=document.getElementById('renameDesks');
+  rd.innerHTML=desks.map(d=>`<div class="row" style="margin-bottom:4px"><input value="${d.label}" oninput="renameDesk('${d.id}',this.value)" style="flex:1"><span class="muted">R${d.row+1}C${d.col+1} · ${d.seats}p · ${d.orientation==='horizontal'?'H':'V'}</span></div>`).join('');
+}
+
+/* ====================================================================
+   SOUS-GROUPES (regroupements multi-classes)
+==================================================================== */
+function sgSubgroupsSection(){
+  const sgs=Object.values(state.subgroups||{});
+  if(sgs.length===0) return `<div class="muted" style="margin-top:6px">Aucun sous-groupe créé.</div>`;
+  const curId = state.activeView && state.activeView.type==='subgroup' ? state.activeView.id : null;
+  return `<div class="layout-grid2" style="margin-top:8px">`+sgs.map(sg=>{
+    const nb=sg.assignments ? sg.assignments.filter(a=>a.studentId).length : 0;
+    const srcs=[...new Set(sg.assignments?sg.assignments.map(a=>a.classId):[])]
+      .map(cid=>state.classes[cid]?state.classes[cid].name:'?').join(', ');
+    const active=sg.id===curId;
+    return `<div class="preset-card ${active?'active':''}">
+      <div class="pt">🔀 ${escapeHtml(sg.name)}</div>
+      <div class="pd">${nb} élève(s) · 📚 ${escapeHtml(srcs||'—')}</div>
+      <div class="row" style="margin-top:6px;gap:4px">
+        <button class="sm" onclick="switchToSubgroup('${sg.id}')">${active?'✓ Actif':'Ouvrir'}</button>
+        <button class="sm ghost" style="border:1px solid var(--border)" onclick="openAssignSubgroupModal('${sg.id}')">👥 Affecter</button>
+        <button class="sm ghost" style="border:1px solid var(--border)" onclick="renameSubgroup('${sg.id}')">✏️</button>
+        <button class="sm ghost" style="border:1px solid var(--border)" onclick="deleteSubgroup('${sg.id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('')+`</div>`;
+}
+function newSubgroup(name, sourceClassIds){
+  const id=uid();
+  const sg={ id, name, sourceClassIds:[...sourceClassIds], layout:defaultLayout(), layoutPreset:'classique', assignments:[] };
+  state.subgroups[id]=sg;
+  return id;
+}
+window.switchToSubgroup=function(id){
+  state.activeView={type:'subgroup', id};
+  state.selectedStudentId=null; state.selectedDeskId=null;
+  save(); render(); toast('Sous-groupe ouvert');
+};
+window.renameSubgroup=function(id){
+  const sg=state.subgroups[id]; if(!sg) return;
+  const name=prompt('Renommer le sous-groupe :', sg.name);
+  if(name){ sg.name=name; save(); renderLayoutPanel(); renderClassSelect(); }
+};
+window.deleteSubgroup=function(id){
+  const sg=state.subgroups[id]; if(!sg) return;
+  if(!confirm(`Supprimer le sous-groupe « ${sg.name} » ? (les élèves ne sont pas supprimés, ils restent dans leurs classes)`)) return;
+  delete state.subgroups[id];
+  if(state.activeView && state.activeView.type==='subgroup' && state.activeView.id===id){
+    state.activeView={type:'class', id:state.currentClassId};
+  }
+  save(); render(); toast('Sous-groupe supprimé');
+};
+window.openCreateSubgroupModal=function(){
+  const classes=Object.values(state.classes);
+  if(classes.length<2){ toast('Créez au moins 2 classes d\'abord'); return; }
+  const body=`
+  <p class="muted">Mélangez les élèves de plusieurs classes en sous-groupes (ex : 2 classes → 3 sous-groupes). L'élève reste rattaché à sa classe d'origine.</p>
+  <div class="divider"></div>
+  <div class="field" style="margin-bottom:8px"><label>Nom du sous-groupe</label><input id="sgName" value="Sous-groupe 1" style="width:100%"></div>
+  <h3 style="font-size:13px">Classes sources (cochez au moins 2)</h3>
+  <div class="chips" id="sgClassChips">
+    ${classes.map(c=>`<span class="chip" data-cid="${c.id}" onclick="event.stopPropagation();this.classList.toggle('on')">📚 ${escapeHtml(c.name)} (${c.students.length})</span>`).join('')}
+  </div>
+  <div class="divider"></div>
+  <div class="row">
+    <div class="field"><label>Nombre de sous-groupes à créer</label>
+      <select id="sgCount" style="width:90px">
+        ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===3?'selected':''}>${n}</option>`).join('')}
+      </select>
+    </div>
+    <label class="row center" style="gap:6px;height:38px"><input type="checkbox" id="sgBalanced" checked> Répartition équilibrée (alternance M/F)</label>
+  </div>
+  <p class="muted">Crée plusieurs sous-groupes d'un coup : « Sous-groupe 1 », « Sous-groupe 2 »… Les élèves des classes cochées sont répartis équitablement (avec alternance garçons/filles si coché). Vous pourrez ajuster l'affectation ensuite.</p>
+  <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="primary" id="sgDoCreate">Créer</button></div>
+  `;
+  openModal('🔀 Créer des sous-groupes',body,true);
+  document.getElementById('sgDoCreate').onclick=()=>{
+    const name=document.getElementById('sgName').value.trim()||'Sous-groupe';
+    const count=parseInt(document.getElementById('sgCount').value)||3;
+    const balanced=document.getElementById('sgBalanced').checked;
+    const cids=[...document.querySelectorAll('#sgClassChips .chip.on')].map(el=>el.dataset.cid);
+    if(cids.length<2){ toast('Cochez au moins 2 classes'); return; }
+    // collecter tous les élèves des classes sources
+    let pool=[];
+    cids.forEach(cid=>{ const c=state.classes[cid]; c.students.forEach(s=> pool.push({classId:cid, studentId:s.id, sex:s.sex||'', name:s.name})); });
+    // répartition
+    if(balanced){
+      let males=pool.filter(x=>x.sex==='M');
+      let females=pool.filter(x=>x.sex==='F');
+      let unknown=pool.filter(x=>!x.sex);
+      // alterner M/F puis les inconnus en fin
+      pool=[];
+      let m=0,f=0;
+      while(m<males.length||f<females.length){
+        if(f<females.length) pool.push(females[f++]);
+        if(m<males.length) pool.push(males[m++]);
+      }
+      pool=pool.concat(unknown);
+    }else{
+      // brassage
+      for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+    }
+    // créer N sous-groupes et répartir en round-robin
+    const createdIds=[];
+    for(let g=0;g<count;g++){
+      const gid=newSubgroup(name+' '+(g+1), cids);
+      createdIds.push(gid);
+    }
+    pool.forEach((x,i)=>{
+      const gid=createdIds[i%count];
+      state.subgroups[gid].assignments.push({deskId:null,index:null,classId:x.classId,studentId:x.studentId});
+    });
+    // pour chaque sous-groupe : assigner les membres aux places libres
+    createdIds.forEach(gid=>{ reassignViewSeats(state.subgroups[gid]); });
+    // ouvrir le 1er sous-groupe
+    state.activeView={type:'subgroup', id:createdIds[0]};
+    state.selectedStudentId=null; state.selectedDeskId=null;
+    save(); render(); closeModal();
+    toast(count+' sous-groupe(s) créé(s)');
+  };
+};
+window.openAssignSubgroupModal=function(id){
+  const sg=state.subgroups[id]; if(!sg) return;
+  // construire la liste des élèves des classes sources + état d'affectation
+  const assignedIds=new Set((sg.assignments||[]).filter(a=>a.studentId).map(a=>a.studentId));
+  let allStudents=[];
+  (sg.sourceClassIds||Object.keys(state.classes)).forEach(cid=>{
+    const c=state.classes[cid]; if(!c) return;
+    c.students.forEach(s=> allStudents.push({classId:cid, studentId:s.id, name:s.name, sex:s.sex||'', assigned:assignedIds.has(s.id)}));
+  });
+  const body=`
+  <p class="muted">Cochez les élèves à inclure dans « ${escapeHtml(sg.name)} ». Les élèves cochés seront placés automatiquement sur les places disponibles du plan du sous-groupe.</p>
+  <div class="divider"></div>
+  <div class="row" style="margin-bottom:8px">
+    <button class="sm" onclick="sgToggleAll('${id}',true)">Tout cocher</button>
+    <button class="sm" onclick="sgToggleAll('${id}',false)">Tout décocher</button>
+  </div>
+  <div class="chips" id="sgAssignChips" style="flex-direction:column;align-items:stretch;gap:4px">
+    ${allStudents.map((x,i)=>`<label class="row center" style="gap:8px;padding:4px 6px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
+      <input type="checkbox" data-cid="${x.classId}" data-sid="${x.studentId}" ${x.assigned?'checked':''}>
+      <small class="tag" style="color:var(--ink2)">${escapeHtml(state.classes[x.classId].name)}</small>
+      ${x.sex?`<small class="tag" style="${x.sex==='M'?'color:#2563eb':'color:#db2777'}">${x.sex}</small>`:''}
+      <span style="flex:1">${escapeHtml(x.name)}</span>
+    </label>`).join('')}
+  </div>
+  <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="primary" id="sgDoAssign">Affecter au plan</button></div>
+  `;
+  openModal('👥 Affecter — '+sg.name,body,true);
+  document.getElementById('sgDoAssign').onclick=()=>{
+    const checks=[...document.querySelectorAll('#sgAssignChips input[type=checkbox]')];
+    const selected=checks.filter(c=>c.checked).map(c=>({classId:c.dataset.cid, studentId:c.dataset.sid}));
+    sg.assignments=selected.map(x=>({deskId:null,index:null,classId:x.classId,studentId:x.studentId}));
+    reassignViewSeats(sg);
+    save(); render(); closeModal();
+    toast(selected.length+' élève(s) affecté(s)');
+  };
+};
+window.sgToggleAll=function(id,on){
+  document.querySelectorAll('#sgAssignChips input[type=checkbox]').forEach(c=>c.checked=on);
+};
+
+function presetMini(key){
+  const previews={
+    'classique':`<div class="preset-mini" style="grid-template-columns:repeat(4,10px)">${Array(16).fill('<i></i>').join('')}</div>`,
+    'ilots':`<div class="preset-mini" style="grid-template-columns:repeat(3,14px);gap:8px">${Array(6).fill('<i></i>').join('')}</div>`,
+    'u':`<div class="preset-mini" style="grid-template-columns:repeat(5,10px)">${uMini()}</div>`,
+    'double-u':`<div class="preset-mini" style="grid-template-columns:repeat(6,10px)">${duMini()}</div>`,
+    'frontal':`<div class="preset-mini" style="grid-template-columns:repeat(6,10px)">${Array(24).fill('<i></i>').join('')}</div>`,
+  };
+  return previews[key]||'';
+}
+function uMini(){ let s=''; for(let r=0;r<4;r++)for(let c=0;c<5;c++){ const on=(c===0||c===4||r===3); s+=`<i class="${on?'':'off'}"></i>`; } return s; }
+function duMini(){ let s=''; for(let r=0;r<4;r++)for(let c=0;c<6;c++){ const ext=(c===0||c===5||r===3); const int=((c===2||c===3)&&(r===1)); s+=`<i class="${(ext||int)?'':'off'}"></i>`; } return s; }
+
+/* ====================================================================
+   RENDU — select classe & global
+==================================================================== */
+function switchActiveView(val){
+  const [type,id]=val.split(':');
+  state.activeView={type,id};
+  if(type==='class') state.currentClassId=id;
+  state.selectedStudentId=null; state.selectedDeskId=null;
+  save(); render();
+  toast(type==='class'?'Classe affichée : '+escapeHtml(activeName()):'Sous-groupe affiché : '+escapeHtml(activeName()));
+}
+function renderClassSelect(){
+  const sel=document.getElementById('classSelect');
+  const curId = state.activeView ? state.activeView.id : state.currentClassId;
+  const curType = state.activeView ? state.activeView.type : 'class';
+  let html='<optgroup label="🏫 Classes">';
+  html+=Object.values(state.classes).map(c=>`<option value="class:${c.id}" ${curType==='class'&&curId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+  html+='</optgroup>';
+  const sgs=Object.values(state.subgroups||{});
+  if(sgs.length){
+    html+='<optgroup label="🔀 Sous-groupes">';
+    html+=sgs.map(sg=>`<option value="subgroup:${sg.id}" ${curType==='subgroup'&&curId===sg.id?'selected':''}>${escapeHtml(sg.name)}</option>`).join('');
+    html+='</optgroup>';
+  }
+  sel.innerHTML=html;
+  const pSel=document.getElementById('planClassSelect');
+  if(pSel) pSel.innerHTML=html;
+}
+function render(){
+  applySettings();
+  renderClassSelect(); renderPlan(); renderStudentList(); renderSidebar();
+  // adapter l'onglet élèves selon le mode vue (classe vs sous-groupe)
+  const sg=isSubgroupView();
+  const titleEl=document.getElementById('studentsTitle');
+  if(titleEl) titleEl.textContent = sg ? '👥 Élèves du sous-groupe' : '👥 Élèves de la classe';
+  const addBlock=document.getElementById('addStudentBlock');
+  const csvBlock=document.getElementById('importCsvBlock');
+  if(addBlock) addBlock.style.display = sg ? 'none' : '';
+  if(csvBlock) csvBlock.style.display = sg ? 'none' : '';
+  // bouton d'ajout sur le plan masqué en sous-groupe (le retrait reste dispo)
+  const planAdd=document.getElementById('planAddBtn');
+  if(planAdd) planAdd.style.display = sg ? 'none' : '';
+  const tab=document.querySelector('.tab.active')?.dataset.tab;
+  if(tab==='stats') renderStats();
+  if(tab==='layout') renderLayoutPanel();
+  highlightSearch();
+}
+function applySettings(){
+  document.documentElement.style.setProperty('--bg',state.settings.bgColor);
+  document.documentElement.style.setProperty('--board',state.settings.boardColor);
+  document.documentElement.style.setProperty('--prof',state.settings.profColor);
+  document.documentElement.style.setProperty('--ind-scale', state.settings.indScale || 1);
+}
+function highlightSearch(){
+  const q=(document.getElementById('searchInput')?.value||'').toLowerCase().trim();
+  document.querySelectorAll('.seat .student .sname').forEach(el=>{
+    const m=q&&el.textContent.toLowerCase().includes(q);
+    el.parentElement.style.outline=m?'2px solid #16a34a':'';
+    el.parentElement.style.background=m?'#dcfce7':'';
+  });
+}
+
+/* ====================================================================
+   ACTIONS (window)
+==================================================================== */
+window.inc=function(id,key,delta){ const s=findStudent(id); if(!s)return; incTracker(s,key,delta); save(); render(); };
+window.clearStudentHist=function(id){
+  const s=findStudent(id); if(!s) return;
+  if(!confirm('Effacer l\'historique des saisies de cet élève pour '+state.activeTrimester+' ? (les compteurs sont conservés)')) return;
+  s.hist=(s.hist||[]).filter(h=>h.t!==state.activeTrimester);
+  save(); render(); toast('Historique effacé');
+};
+window.setTrimester=function(t){ state.activeTrimester=t; save(); render(); };
+window.toggleValidated=function(id,type){ const s=findStudent(id); if(s) doToggleValidated(s,type); };
+window.toggleVerified=function(id,type){ const s=findStudent(id); if(s) doToggleVerified(s,type); };
+window.toggleNeed=function(id,type){ const s=findStudent(id); if(s) toggleNeedStudent(s,type); };
+window.setStudentSex=function(id,sex){ const s=findStudent(id); if(s){ s.sex = (s.sex===sex?'':sex); save(); render(); } };
+window.removeStudent=function(id){
+  if(isSubgroupView()){
+    // en sous-groupe : retirer l'élève des assignments (pas de suppression définitive)
+    const sg=activeView();
+    sg.assignments=sg.assignments.filter(a=>a.studentId!==id);
+    if(state.selectedStudentId===id) state.selectedStudentId=null;
+    save(); render(); closeModal(); toast('Élève retiré du sous-groupe'); return;
+  }
+  if(!confirm('Supprimer cet élève de sa classe ?')) return;
+  const cls=findStudentClass(id);
+  if(cls){ cls.students=cls.students.filter(s=>s.id!==id);
+    // retirer aussi des sous-groupes qui le référencent
+    Object.values(state.subgroups).forEach(sg=>{ sg.assignments=sg.assignments.filter(a=>a.studentId!==id); });
+  }
+  if(state.selectedStudentId===id) state.selectedStudentId=null;
+  save(); render(); closeModal(); toast('Élève supprimé');
+};
+window.renameStudent=function(id){
+  const s=findStudent(id); if(!s) return;
+  const name=prompt('Modifier le nom de l\'élève :', s.name);
+  if(name===null) return;
+  s.name=name.trim();
+  const sex=prompt('Sexe (M / F) — laisser vide pour effacer :', s.sex||'');
+  if(sex!==null){ s.sex = (sex.trim().toUpperCase().startsWith('F'))?'F':(sex.trim().toUpperCase().startsWith('M')?'M':''); }
+  save(); render(); toast('Élève modifié');
+};
+/* ---- Ajout / retrait d'élève depuis l'onglet Plan de classe ---- */
+function planAddStudent(){
+  if(isSubgroupView()){ toast('Ajoutez l\'élève dans sa classe d\'origine'); return; }
+  const name=prompt('Nom de l\'élève à ajouter :','');
+  if(!name || !name.trim()){ return; }
+  const sexRaw=prompt('Sexe (M / F) — laisser vide si non précisé :','');
+  let sex='';
+  if(sexRaw!==null){ const s=sexRaw.trim().toUpperCase(); sex = s.startsWith('F')?'F':(s.startsWith('M')?'M':''); }
+  const cls=currentClass();
+  const s={id:uid(),name:name.trim(),sex,seat:findFreeSeat(cls),trackers:{},validated:{},verified:{},needs:[]};
+  cls.students.push(s); save(); render();
+  toast(s.seat?('Élève ajouté et placé'):('Élève ajouté (aucune place libre)'));
+}
+/* ---- Plein écran du plan ---- */
+function togglePlanFullscreen(){
+  const el=document.getElementById('tab-plan');
+  const btn=document.getElementById('fullscreenBtn');
+  const isFs=document.fullscreenElement===el||el.classList.contains('fs-fallback');
+  if(isFs){
+    if(document.fullscreenElement){ document.exitFullscreen(); }
+    else { el.classList.remove('fs-fallback'); }
+    if(btn) btn.textContent='⛶ Plein écran';
+    syncOverlaysWithFullscreen();
+    return;
+  }
+  if(el.requestFullscreen){
+    el.requestFullscreen().then(()=>syncOverlaysWithFullscreen()).catch(()=>{
+      el.classList.add('fs-fallback'); if(btn) btn.textContent='⛶ Quitter';
+      syncOverlaysWithFullscreen();
+    });
+    if(btn) btn.textContent='⛶ Quitter';
+  } else {
+    el.classList.add('fs-fallback'); if(btn) btn.textContent='⛶ Quitter';
+  }
+  syncOverlaysWithFullscreen();
+}
+// en plein écran, seuls les enfants de l'élément plein écran sont affichés :
+// on déplace donc modalRoot et toast dans #tab-plan, puis on les remet en place en sortant.
+function isPlanFullscreen(){
+  const el=document.getElementById('tab-plan');
+  return !!el && (document.fullscreenElement===el || el.classList.contains('fs-fallback'));
+}
+window.fsCardStep=function(delta){
+  const cur=+state.settings.fsCardH||15;
+  state.settings.fsCardH=Math.min(70,Math.max(10,cur+delta));
+  save();
+  const fsCard=document.getElementById('fsStudentCard');
+  if(fsCard){ fsCard.style.maxHeight=state.settings.fsCardH+'vh';
+    const pct=fsCard.querySelector('.fs-card-tools b'); if(pct) pct.textContent=state.settings.fsCardH+'%'; }
+  toast('Fiche : '+state.settings.fsCardH+'% de l\'écran');
+};
+window.closeFsCard=function(){
+  state.selectedStudentId=null; save(); render();
+  const fsCard=document.getElementById('fsStudentCard');
+  if(fsCard){ fsCard.classList.remove('show'); fsCard.innerHTML=''; }
+  toast('Fiche fermée');
+};
+function syncOverlaysWithFullscreen(){
+  const plan=document.getElementById('tab-plan');
+  const modal=document.getElementById('modalRoot');
+  const tst=document.getElementById('toast');
+  const inFs = document.fullscreenElement===plan || plan.classList.contains('fs-fallback');
+  [modal,tst].forEach(n=>{
+    if(!n) return;
+    if(inFs && n.parentElement!==plan){ plan.appendChild(n); }
+    if(!inFs && n.parentElement===plan){ document.body.appendChild(n); }
+  });
+  // mettre à jour la fiche élève affichée en bas du plan
+  updateFsCard(inFs && state.selectedStudentId ? 'keep' : null);
+}
+document.addEventListener('fullscreenchange',()=>{
+  const el=document.getElementById('tab-plan'); const btn=document.getElementById('fullscreenBtn');
+  if(document.fullscreenElement!==el){
+    if(btn && btn.textContent==='⛶ Quitter' && !el.classList.contains('fs-fallback')) btn.textContent='⛶ Plein écran';
+  }
+  syncOverlaysWithFullscreen();
+});
+function openRemoveStudentModal(){
+  const sg=isSubgroupView();  const list=activeStudents();
+  if(list.length===0){ toast('Aucun élève à retirer'); return; }
+  const rows=list.map(s=>{
+    const owner=findStudentClass(s.id);
+    const placed = sg
+      ? (activeView().assignments||[]).some(a=>a.studentId===s.id)
+      : !!s.seat;
+    return `<tr>
+      <td class="name">${escapeHtml(s.name)}${sg&&owner?` <small class="tag" style="color:var(--ink2)">${escapeHtml(owner.name)}</small>`:''}</td>
+      <td>${s.sex?`<span class="badge ${s.sex==='M'?'info':''}" style="${s.sex==='M'?'':'background:#fce7f3;color:#be185d'}">${s.sex}</span>`:'—'}</td>
+      <td>${placed?'🪑 Placé':'🚫 Non placé'}</td>
+      <td>
+        ${placed?`<button class="sm" onclick="releaseStudent('${s.id}')">🪑 Libérer la place</button>`:''}
+        <button class="sm danger" onclick="removeStudent('${s.id}')">🗑️ Supprimer</button>
+      </td>
+    </tr>`;
+  }).join('');
+  const body=`
+  <p class="muted">${sg?'Retirer un élève du sous-groupe (il reste dans sa classe d\'origine) ou supprimer définitivement de sa classe.':'Retirer un élève de sa place (sans le supprimer) ou le supprimer définitivement de la classe.'}</p>
+  <div class="divider"></div>
+  <table class="stats"><thead><tr><th>Élève</th><th>Sexe</th><th>Place</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>
+  `;
+  openModal('🗑️ Retirer / supprimer un élève', body, true);
+}
+window.releaseStudent=function(id){
+  if(isSubgroupView()){
+    const sg=activeView();
+    sg.assignments=sg.assignments.filter(a=>a.studentId!==id);
+  } else {
+    const s=findStudent(id); if(s) s.seat=null;
+  }
+  save(); render(); closeModal();
+  toast('Élève libéré de sa place');
+};
+window.openRemoveStudentModal=openRemoveStudentModal;
+window.renameDesk=function(id,val){ const d=activeLayout().desks.find(x=>x.id===id); if(d){d.label=val; save(); renderPlan();} };
+window.changeGrid=function(dim,val){
+  const V=activeView(); const L=V.layout; val=parseInt(val)||1; val=Math.min(10,Math.max(1,val));
+  L[dim]=val; let n=1; const desks=[];
+  for(let r=0;r<L.rows;r++) for(let c=0;c<L.cols;c++){ desks.push({id:'d'+n,label:'Bureau '+n,row:r,col:c,disabled:false,orientation:'horizontal',seats:2,seatDisabled:[false,false]}); n++; }
+  L.desks=desks; V.layoutPreset='custom';
+  reassignViewSeats(V); save(); renderLayoutPanel(); renderPlan();
+};
+window.updateBoard=function(k,v){ const L=activeLayout(); L.board[k]=v; save(); renderPlan(); };
+window.updateProf=function(k,v){ const L=activeLayout(); L.prof[k]=v; save(); renderPlan(); };
+window.applyPreset=applyPreset;
+window.toggleOrientation=function(id){
+  const d=activeLayout().desks.find(x=>x.id===id); if(!d) return;
+  d.orientation = d.orientation==='vertical'?'horizontal':'vertical';
+  save(); renderLayoutPanel(); renderPlan();
+};
+window.changeSeats=function(id,delta){
+  const V=activeView(); const d=V.layout.desks.find(x=>x.id===id); if(!d) return;
+  let nb=(d.seats||2)+delta; nb=Math.min(4,Math.max(1,nb));
+  if(nb===d.seats) return;
+  // ajuster seatDisabled
+  const newDis=Array.from({length:nb},(_,i)=> (d.seatDisabled[i]!==undefined?d.seatDisabled[i]:false));
+  // libérer les élèves au-delà du nouveau nombre
+  freeSeatInView(V,d.id,nb);
+  d.seats=nb; d.seatDisabled=newDis;
+  save(); renderLayoutPanel(); renderPlan();
+};
+window.setAllSeats=function(nb){
+  const V=activeView(); const L=V.layout; nb=Math.min(4,Math.max(1,parseInt(nb)||2));
+  L.desks.forEach(d=>{
+    const old=d.seats||2;
+    if(nb<old) freeSeatInView(V,d.id,nb);
+    d.seats=nb;
+    d.seatDisabled=Array.from({length:nb},(_,i)=> (d.seatDisabled&&d.seatDisabled[i]!==undefined?d.seatDisabled[i]:false));
+    if(d.disabled) d.seatDisabled=Array.from({length:nb},()=>true);
+  });
+  reassignViewSeats(V);
+  V.layoutPreset='custom';
+  save(); renderLayoutPanel(); renderPlan();
+  toast(nb+' place'+(nb>1?'s':'')+' par bureau');
+};
+
+/* ====================================================================
+   MODALS
+==================================================================== */
+function openModal(title,bodyHtml,wide){
+  document.getElementById('modalRoot').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal${wide?' wide':''}"><button class="icon ghost close" onclick="closeModal()">✕</button><h3>${title}</h3>${bodyHtml}</div></div>`;
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
+window.closeModal=closeModal;
+
+/* ====================================================================
+   SETTINGS : couleurs + besoins + règles + indicateurs
+==================================================================== */
+function openSettings(){
+  const R=state.rules; const S=state.settings;
+  const body=`
+  <h3 style="font-size:14px">🎨 Couleurs</h3>
+  <div class="row">
+    <div class="field"><label>Fond app</label><input type="color" value="${S.bgColor}" onchange="setSetting('bgColor',this.value)"></div>
+    <div class="field"><label>Tableau</label><input type="color" value="${S.boardColor}" onchange="setSetting('boardColor',this.value)"></div>
+    <div class="field"><label>Bureau prof</label><input type="color" value="${S.profColor}" onchange="setSetting('profColor',this.value)"></div>
+  </div>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">♿ Types de besoins particuliers</h3>
+  <p class="muted" style="margin-bottom:8px">Modifiez le libellé, l'emoji et la couleur de chaque type. La couleur est <b>uniforme</b> : tous les élèves ayant le même type partagent la même couleur. Supprimez les types que vous ne souhaitez pas utiliser.</p>
+  <div id="needTypesList"></div>
+  <div class="row" style="margin-top:8px">
+    <input id="ntEmoji" placeholder="Emoji" style="width:60px" value="📌">
+    <input id="ntLabel" placeholder="Libellé" style="flex:1">
+    <input id="ntColor" type="color" value="#64748b">
+    <button onclick="addNeedType()">➕ Ajouter un type</button>
+  </div>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">📨 Affichage sur le plan</h3>
+  <div class="row">
+    <label class="row center" style="gap:6px"><input type="radio" name="needMode" value="color" ${S.needMode==='color'?'checked':''} onchange="setSetting('needMode','color')"> Anneau coloré</label>
+    <label class="row center" style="gap:6px"><input type="radio" name="needMode" value="emoji" ${S.needMode==='emoji'?'checked':''} onchange="setSetting('needMode','emoji')"> Icône emoji</label>
+    <label class="row center" style="gap:6px"><input type="radio" name="needMode" value="none" ${S.needMode==='none'?'checked':''} onchange="setSetting('needMode','none')"> Aucun</label>
+  </div>
+  <p class="muted">Choisissez comment signaler un élève à besoin particulier sur le plan. « Aucun » masque le signalement visuel (les besoins restent enregistrés).</p>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">📋 Règles de sanctions</h3>
+  <p class="muted" style="margin-bottom:8px">Seuils de proposition automatique.</p>
+  <div class="input-row"><label>📒 Mot dès ... oublis</label><input type="number" min="1" max="20" value="${R.motSeuilOublis}" onchange="setRule('motSeuilOublis',this.value)" style="width:70px"></div>
+  <div class="input-row"><label>📒 Mot dès ... bavardages</label><input type="number" min="1" max="20" value="${R.motSeuilBavardages}" onchange="setRule('motSeuilBavardages',this.value)" style="width:70px"></div>
+  <div class="input-row"><label>📄 Punition dès ... oublis</label><input type="number" min="1" max="30" value="${R.punitionSeuilOublis}" onchange="setRule('punitionSeuilOublis',this.value)" style="width:70px"></div>
+  <div class="input-row"><label>📄 Punition dès ... bavardages</label><input type="number" min="1" max="30" value="${R.punitionSeuilBavardages}" onchange="setRule('punitionSeuilBavardages',this.value)" style="width:70px"></div>
+  <p class="muted" style="margin-top:6px">La proposition est une suggestion : vous validez la sanction, puis signalez sa vérification (ce qui retire le pop-up sur le plan).</p>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">🎯 Calcul de la note d'implication</h3>
+  <p class="muted" style="margin-bottom:8px">Note = base + points de participation − pénalité de bavardages (plafonnée entre 0 et 20).</p>
+  <div class="row" style="margin-bottom:6px">
+    <label class="row center" style="gap:6px"><input type="radio" name="noteMode" value="relatif" ${R.noteMode!=='absolu'?'checked':''} onchange="setRule('noteMode','relatif')"> Relatif à la classe</label>
+    <label class="row center" style="gap:6px"><input type="radio" name="noteMode" value="absolu" ${R.noteMode==='absolu'?'checked':''} onchange="setRule('noteMode','absolu')"> Absolu</label>
+  </div>
+  <p class="muted" style="margin:4px 0 8px">${R.noteMode==='absolu'?'« Absolu » : chaque participation vaut un nombre de points fixe.':'« Relatif » : le meilleur participant de la classe obtient le gain maximum.'}</p>
+  <div class="input-row"><label>🔰 Note de base</label><input type="number" min="0" max="20" step="0.5" value="${R.noteBase}" onchange="setRule('noteBase',this.value)" style="width:70px"></div>
+  ${R.noteMode==='absolu'
+    ?`<div class="input-row"><label>🙋 Points par participation</label><input type="number" min="0" max="10" step="0.1" value="${R.noteAbsGain}" onchange="setRule('noteAbsGain',this.value)" style="width:70px"></div>`
+    :`<div class="input-row"><label>🙋 Gain max de participation</label><input type="number" min="0" max="20" step="0.5" value="${R.noteGain}" onchange="setRule('noteGain',this.value)" style="width:70px"></div>`}
+  <div class="input-row"><label>💬 Pénalité par bavardage</label><input type="number" min="0" max="5" step="0.1" value="${R.notePenBavardage}" onchange="setRule('notePenBavardage',this.value)" style="width:70px"></div>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">📈 Icônes d'indicateurs sur le plan</h3>
+  <div class="input-row"><label>🔎 Taille des icônes</label><input type="range" min="0.8" max="2" step="0.1" value="${+S.indScale||1}" oninput="setSetting('indScale',this.value);this.nextElementSibling.textContent=(+this.value).toFixed(1)+'×'" style="flex:1"><b style="width:40px;text-align:right">${(+S.indScale||1).toFixed(1)}×</b></div>
+  <p class="muted" style="margin:4px 0 8px">Modifiez l'emoji et le libellé de chaque indicateur (participation, bavardages, oublis…). Décochez « Plan » pour masquer un indicateur du plan de classe — les compteurs restent enregistrés dans la fiche élève. Les compteurs existants sont conservés.</p>
+  <div id="indEditorList"></div>
+  <div class="divider"></div>
+  <h3 style="font-size:14px">🏷️ Indicateurs personnalisés</h3>
+  <div id="customIndList"></div>
+  <div class="row" style="margin-top:8px">
+    <input id="ciEmoji" placeholder="Emoji" style="width:60px">
+    <input id="ciLabel" placeholder="Libellé" style="flex:1">
+    <input id="ciColor" type="color" value="#0891b2">
+    <button onclick="addCustomIndicator()">➕ Ajouter</button>
+  </div>`;
+  openModal('⚙️ Personnalisation & règles', body, true);
+  renderIndicatorsEditor();
+  renderCustomIndicators();
+  renderNeedTypesList();
+}
+function renderIndicatorsEditor(){
+  const root=document.getElementById('indEditorList'); if(!root) return;
+  const inds=allIndicators();
+  root.innerHTML=inds.map(i=>`<div class="row" style="margin-bottom:6px">
+    <input value="${escapeHtml(i.emoji)}" oninput="updInd('${i.key}','emoji',this.value)" title="Emoji de l'indicateur" style="width:60px;text-align:center;font-size:15px">
+    <input value="${escapeHtml(i.label)}" oninput="updInd('${i.key}','label',this.value)" title="Libellé de l'indicateur" style="flex:1">
+    <label class="row center" style="gap:4px;font-size:12px" title="Afficher cet indicateur sur le plan de classe"><input type="checkbox" ${isIndShownOnPlan(i.key)?'checked':''} onchange="toggleIndOnPlan('${i.key}',this.checked)"> Plan</label>
+    ${INDICATORS.some(b=>b.key===i.key)?'<button class="icon ghost" title="Réinitialiser" onclick="resetInd(\''+i.key+'\')">↩️</button>':''}
+  </div>`).join('');
+}
+window.updInd=function(key,fld,v){
+  const base=INDICATORS.find(x=>x.key===key)||state.customIndicators.find(x=>x.key===key);
+  if(!base) return;
+  if(state.customIndicators.find(x=>x.key===key)){ // indicateur personnalisé : édition directe
+    const i=state.customIndicators.find(x=>x.key===key);
+    i[fld]=v; if(fld==='emoji'&&!v.trim()){ toast('Emoji requis'); return; }
+  } else { // indicateur intégré : stocké dans indicatorEdits
+    if(fld==='emoji'&&!v.trim()){ toast('Emoji requis'); return; }
+    if(!state.indicatorEdits) state.indicatorEdits={};
+    state.indicatorEdits[key]=Object.assign({}, (state.indicatorEdits[key]||{}), {[fld]:v});
+  }
+  save(); render();
+};
+window.resetInd=function(key){
+  if(state.indicatorEdits) delete state.indicatorEdits[key];
+  save(); render(); renderIndicatorsEditor(); toast('Indicateur réinitialisé');
+};
+window.toggleIndOnPlan=function(key,shown){
+  if(!state.settings.hiddenInds) state.settings.hiddenInds={};
+  if(shown) delete state.settings.hiddenInds[key];
+  else state.settings.hiddenInds[key]=true;
+  save(); render(); renderIndicatorsEditor();
+  toast(shown?'Indicateur affiché sur le plan':'Indicateur masqué sur le plan (les compteurs restent enregistrés)');
+};
+function renderCustomIndicators(){
+  const root=document.getElementById('customIndList'); if(!root) return;
+  if(state.customIndicators.length===0){ root.innerHTML=`<p class="muted">Aucun indicateur personnalisé.</p>`; return; }
+  root.innerHTML=state.customIndicators.map(i=>`<div class="row" style="margin-bottom:6px">
+    <span style="font-size:18px">${i.emoji}</span>
+    <input value="${i.label}" oninput="updCI('${i.key}','label',this.value)" style="flex:1">
+    <input type="color" value="${i.color}" onchange="updCI('${i.key}','color',this.value)">
+    <button class="icon danger" onclick="delCI('${i.key}')">🗑️</button>
+  </div>`).join('');
+}
+window.setSetting=function(k,v){ state.settings[k]= (k==='indScale') ? (Math.min(2,Math.max(0.8,parseFloat(v)||1))) : v; save(); applySettings(); render(); };
+window.setRule=function(k,v){
+  if(k==='noteMode'){ state.rules[k]=(v==='absolu'?'absolu':'relatif'); save(); render(); openSettings(); return; }
+  const n=parseFloat(v); if(isNaN(n)){ toast('Valeur invalide'); return; }
+  state.rules[k]=n; save(); render(); toast('Règle mise à jour');
+};
+window.addCustomIndicator=function(){
+  const e=document.getElementById('ciEmoji').value.trim(), l=document.getElementById('ciLabel').value.trim(), c=document.getElementById('ciColor').value;
+  if(!e||!l){ toast('Emoji et libellé requis'); return; }
+  const key='custom_'+uid().slice(0,6);
+  state.customIndicators.push({key,emoji:e,label:l,color:c,bg:hexToRgba(c,0.18)});
+  save(); renderCustomIndicators(); toast('Indicateur ajouté');
+  document.getElementById('ciEmoji').value=''; document.getElementById('ciLabel').value='';
+};
+window.updCI=function(k,fld,v){ const i=state.customIndicators.find(x=>x.key===k); if(i){ i[fld]=v; if(fld==='color') i.bg=hexToRgba(v,0.18); save(); render(); } };
+window.delCI=function(k){ state.customIndicators=state.customIndicators.filter(x=>x.key!==k); save(); renderCustomIndicators(); render(); };
+function hexToRgba(hex,a){ const h=hex.replace('#',''); const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16); return `rgba(${r},${g},${b},${a})`; }
+
+/* Gestion des types de besoins particuliers */
+function renderNeedTypesList(){
+  const root=document.getElementById('needTypesList'); if(!root) return;
+  if(state.needTypes.length===0){ root.innerHTML=`<p class="muted">Aucun type défini. Ajoutez-en ci-dessous.</p>`; return; }
+  // compter les élèves utilisant chaque type (toutes classes confondues)
+  const counts={};
+  state.needTypes.forEach(nt=> counts[nt.key]=0);
+  Object.values(state.classes).forEach(c=> c.students.forEach(st=> (st.needs||[]).forEach(k=>{ if(counts[k]!==undefined) counts[k]++; })));
+  root.innerHTML=state.needTypes.map(nt=>`<div class="row" style="margin-bottom:6px">
+    <span style="font-size:18px;min-width:24px;text-align:center">${nt.emoji}</span>
+    <input value="${nt.emoji}" maxlength="3" style="width:48px;text-align:center" title="Emoji" onchange="updNT('${nt.key}','emoji',this.value)">
+    <input value="${escapeHtml(nt.label)}" oninput="updNT('${nt.key}','label',this.value)" style="flex:1" title="Libellé">
+    <input type="color" value="${nt.color}" onchange="updNT('${nt.key}','color',this.value)" title="Couleur uniforme">
+    <button class="icon danger" onclick="delNT('${nt.key}')" title="Supprimer ce type">🗑️</button>
+  </div>`).join('');
+}
+window.addNeedType=function(){
+  const e=document.getElementById('ntEmoji').value.trim(), l=document.getElementById('ntLabel').value.trim(), c=document.getElementById('ntColor').value;
+  if(!e||!l){ toast('Emoji et libellé requis'); return; }
+  const key='nt_'+uid().slice(0,6);
+  state.needTypes.push({key,emoji:e,label:l,color:c});
+  save(); renderNeedTypesList(); toast('Type ajouté');
+  document.getElementById('ntLabel').value='';
+};
+window.updNT=function(k,fld,v){ const nt=state.needTypes.find(x=>x.key===k); if(nt){ nt[fld]=v; save(); if(fld!=='label') render(); } };
+window.delNT=function(k){
+  // retirer ce type de tous les élèves, puis supprimer le type
+  Object.values(state.classes).forEach(c=> c.students.forEach(s=>{ if(s.needs) s.needs=s.needs.filter(n=>n!==k); }));
+  state.needTypes=state.needTypes.filter(x=>x.key!==k);
+  save(); renderNeedTypesList(); render(); toast('Type supprimé');
+};
+
+/* ====================================================================
+   CLASSES CRUD
+==================================================================== */
+function addClass(){ const name=prompt('Nom de la nouvelle classe :','Classe '+(Object.keys(state.classes).length+1)); if(!name)return; const id=newClass(name); state.activeView={type:'class',id}; save(); render(); toast('Classe créée'); }
+function renameClass(){
+  if(isSubgroupView()){ toast('Sélectionnez une classe pour la renommer'); return; }
+  const c=currentClass(); if(!c)return; const name=prompt('Renommer la classe :',c.name); if(name){c.name=name; save(); render();}
+}
+function deleteClass(){
+  if(isSubgroupView()){ toast('Sélectionnez une classe pour la supprimer'); return; }
+  const c=currentClass(); if(!c)return; if(!confirm(`Supprimer « ${c.name} » et tous ses élèves ?`))return;
+  // nettoyer les sous-groupes qui référencent cette classe
+  Object.values(state.subgroups||{}).forEach(sg=>{ sg.assignments=(sg.assignments||[]).filter(a=>a.classId!==c.id); sg.sourceClassIds=(sg.sourceClassIds||[]).filter(id=>id!==c.id); });
+  delete state.classes[c.id];
+  state.currentClassId=Object.keys(state.classes)[0]||null; if(!state.currentClassId) newClass('Classe 1');
+  state.activeView={type:'class', id:state.currentClassId};
+  save(); render(); toast('Classe supprimée');
+}
+
+/* ====================================================================
+   ÉLÈVES CRUD
+==================================================================== */
+function addStudent(){
+  if(isSubgroupView()){ toast('Ajoutez l\'élève dans sa classe d\'origine'); return; }
+  const input=document.getElementById('newStudentName'); const name=input.value.trim();
+  const sex=document.getElementById('newStudentSex').value;
+  if(!name){ toast('Entrez un nom'); return; }
+  const cls=currentClass();
+  const s={id:uid(),name,sex:sex||'',seat:findFreeSeat(cls),trackers:{},validated:{},verified:{},needs:[]};
+  cls.students.push(s); input.value=''; document.getElementById('newStudentSex').value=''; save(); render(); toast('Élève ajouté');
+}
+function findFreeSeat(cls){
+  for(const d of cls.layout.desks){
+    if(d.disabled) continue; const nb=d.seats||2;
+    for(let si=0;si<nb;si++){ if(d.seatDisabled[si]) continue; const occ=cls.students.find(x=>x.seat&&x.seat.deskId===d.id&&x.seat.index===si); if(!occ) return {deskId:d.id,index:si}; }
+  }
+  return null;
+}
+
+/* ====================================================================
+   EXPORT / IMPORT
+==================================================================== */
+function exportData(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='gestion-classe-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); toast('Exporté');
+}
+function importData(file){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      if(!data.classes) throw new Error('Format invalide');
+      state=Object.assign({customIndicators:[],indicatorEdits:{},needTypes:JSON.parse(JSON.stringify(DEFAULT_NEED_TYPES)),settings:{bgColor:'#f1f5f9',boardColor:'#1e293b',profColor:'#fde68a',needMode:'color',indScale:1},rules:Object.assign({},DEFAULT_RULES)}, data);
+      state.rules=Object.assign({},DEFAULT_RULES,state.rules||{});
+      state.settings=Object.assign({needMode:'color',indScale:1}, state.settings||{});
+      state.subgroups=state.subgroups||{}; state.activeView=state.activeView||null;
+      if(!state.needTypes || state.needTypes.length===0) state.needTypes=JSON.parse(JSON.stringify(DEFAULT_NEED_TYPES));
+      if(!state.currentClassId||!state.classes[state.currentClassId]) state.currentClassId=Object.keys(state.classes)[0];
+      state.activeView={type:'class', id:state.currentClassId};
+      save(); render(); toast('Import réussi');
+    }catch(e){ alert('Import échoué: '+e.message); }
+  };
+  reader.readAsText(file);
+}
+
+/* ---- Import CSV : lit le fichier puis ouvre le modal d'options ---- */
+function importCsv(file){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const raw=reader.result;
+      const preview=parseCsvPreview(raw);
+      if(!preview.rows.length){ toast('CSV vide ou illisible'); return; }
+      openCsvOptionsModal(raw,preview);
+    }catch(e){ alert('CSV illisible: '+e.message); }
+  };
+  reader.readAsText(file);
+}
+/* Détecte séparateur et renvoie {sep,rows} (rows = tableau de cellules) */
+function parseCsvPreview(raw){
+  // Auto-détection du séparateur : ; prioritaire si présent, sinon ,
+  const sep = (raw.split(';').length >= raw.split(',').length && raw.indexOf(';')>=0) ? ';' : ',';
+  const lines = raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  const rows=[];
+  for(const ln of lines){
+    if(!ln.trim()) continue;
+    // gestion basique des guillemets
+    const cells=[]; let cur=''; let inQ=false;
+    for(let i=0;i<ln.length;i++){
+      const c=ln[i];
+      if(c==='"'){ inQ=!inQ; continue; }
+      if(c===sep && !inQ){ cells.push(cur); cur=''; continue; }
+      cur+=c;
+    }
+    cells.push(cur);
+    rows.push(cells.map(x=>x.trim()));
+  }
+  return {sep,rows};
+}
+/* Ouvre le modal d'options + mapping + aperçu, puis importe */
+function openCsvOptionsModal(raw,preview){
+  const {sep,rows}=preview;
+  const maxCols = rows.reduce((m,r)=>Math.max(m,r.length),0);
+  // Détecte si la 1ère ligne est un header plausible
+  const firstCells=rows[0];
+  const headerLooksLikeHeader = firstCells.some(c=>/^(nom|pr[eé]nom|sexe|gender|name|classe)$/i.test(c));
+  // Suggestions de mapping par header
+  const headers = headerLooksLikeHeader ? firstCells : [];
+  const suggestCol = (regexes)=>{
+    for(let i=0;i<maxCols;i++){
+      const h=(headers[i]||'').toLowerCase();
+      if(regexes.some(r=>r.test(h))) return i;
+    }
+    return -1;
+  };
+  const sugNom = suggestCol([/^nom$/,/^lastname$/,/^surname$/]);
+  const sugPrenom = suggestCol([/^pr[eé]nom$/,/^firstname$/,/^givenname$/,/^name$/]);
+  const sugSexe = suggestCol([/^sexe$/,/^sex$/,/^genre$/,/^gender$/]);
+  // Construit l'aperçu (10 premières lignes)
+  const previewHtml = rows.slice(headerLooksLikeHeader?1:0, (headerLooksLikeHeader?1:0)+8)
+    .map((r,i)=>`<tr><td>${i+1}</td>${Array.from({length:maxCols},(_,j)=>`<td>${(r[j]||'').replace(/</g,'&lt;')}</td>`).join('')}</tr>`).join('');
+  // Options de mapping (une select par colonne)
+  let mapOpts='';
+  for(let i=0;i<maxCols;i++){
+    const h=headerLooksLikeHeader ? headers[i] : 'Colonne '+(i+1);
+    mapOpts+=`<label class="field" style="min-width:120px"><span>${(h||('Colonne '+(i+1))).replace(/</g,'&lt;')}</span>
+      <select id="csvMap_${i}">
+        <option value="ignore">— Ignorer —</option>
+        <option value="nom"${i===sugNom?' selected':''}>Nom</option>
+        <option value="prenom"${i===sugPrenom?' selected':''}>Prénom</option>
+        <option value="sexe"${i===sugSexe?' selected':''}>Sexe</option>
+      </select></label>`;
+  }
+  const body=`
+  <p class="muted">Importez une liste d'élèves dans la classe courante. Les élèves sont ajoutés aux places disponibles. Les données existantes sont conservées.</p>
+  <div class="divider"></div>
+  <div class="row" style="flex-wrap:wrap;gap:14px;align-items:flex-end">
+    <label class="field"><span>Séparateur</span>
+      <select id="csvSep"><option value=";"${sep===';'?' selected':''}>Point-virgule ;</option><option value=","${sep===','?' selected':''}>Virgule ,</option></select>
+    </label>
+    <label class="row center" style="gap:6px;height:38px"><input type="checkbox" id="csvHeader" ${headerLooksLikeHeader?'checked':''}> La 1<sup>ère</sup> ligne est un en-tête</label>
+  </div>
+  <div class="divider"></div>
+  <h3 style="font-size:13px">Correspondance des colonnes</h3>
+  <div class="row" style="flex-wrap:wrap;gap:10px">${mapOpts}</div>
+  <p class="muted" style="margin-top:6px">Astuce : « Nom » et « Prénom » seront combinés en « NOM Prénom ». Si seul « Nom » est mappé, la cellule entière est utilisée comme nom complet. Le sexe doit contenir M/F (ou Masculin/Féminin/Garçon/Fille).</p>
+  <div class="divider"></div>
+  <h3 style="font-size:13px">Aperçu (8 premières lignes)</h3>
+  <div style="overflow:auto;max-height:200px"><table class="csv-preview"><thead><tr><th>#</th>${Array.from({length:maxCols},(_,j)=>`<th>Col ${(j+1)}</th>`).join('')}</tr></thead><tbody>${previewHtml}</tbody></table></div>
+  <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="primary" id="csvDoImport">Importer</button></div>
+  `;
+  openModal('📁 Importer un CSV',body,true);
+  // Re-parse si on change séparateur / header
+  const rePreview=()=>{
+    const newSep=document.getElementById('csvSep').value;
+    const hasHeader=document.getElementById('csvHeader').checked;
+    const r2=parseCsvPreview(raw.indexOf(newSep)>=0 || newSep===sep ? raw : raw.split(sep).join(newSep));
+    // reconstruire mapping selects
+    const maxC=r2.rows.reduce((m,r)=>Math.max(m,r.length),0);
+    // mettre à jour les selects si le nb de colonnes change
+    const mapDiv=document.querySelector('#modalRoot .row[style*="flex-wrap:wrap"]');
+    let mo='';
+    const curMap={};
+    document.querySelectorAll('[id^="csvMap_"]').forEach(s=>{ curMap['csvMap_'+s.dataset.ci]=s.value; });
+    for(let i=0;i<maxC;i++){
+      const h=hasHeader ? r2.rows[0][i] : 'Colonne '+(i+1);
+      mo+=`<label class="field" style="min-width:120px"><span>${(h||('Colonne '+(i+1))).replace(/</g,'&lt;')}</span>
+        <select id="csvMap_${i}" data-ci="${i}">
+          <option value="ignore">— Ignorer —</option>
+          <option value="nom">Nom</option>
+          <option value="prenom">Prénom</option>
+          <option value="sexe">Sexe</option>
+        </select></label>`;
+    }
+    mapDiv.innerHTML=mo;
+    // reconstruire l'aperçu
+    const start=hasHeader?1:0;
+    const ph=r2.rows.slice(start,start+8).map((r,i)=>`<tr><td>${i+1}</td>${Array.from({length:maxC},(_,j)=>`<td>${(r[j]||'').replace(/</g,'&lt;')}</td>`).join('')}</tr>`).join('');
+    const tb=document.querySelector('#modalRoot .csv-preview tbody'); if(tb) tb.innerHTML=ph;
+  };
+  document.getElementById('csvSep').onchange=rePreview;
+  document.getElementById('csvHeader').onchange=rePreview;
+  document.getElementById('csvDoImport').onclick=()=>{
+    const useSep=document.getElementById('csvSep').value;
+    const hasHeader=document.getElementById('csvHeader').checked;
+    const r=parseCsvPreview(raw.indexOf(useSep)>=0 || useSep===sep ? raw : raw.split(sep).join(useSep));
+    // mapping
+    const map={nom:-1,prenom:-1,sexe:-1};
+    document.querySelectorAll('[id^="csvMap_"]').forEach(sel=>{
+      const idx=parseInt(sel.id.replace('csvMap_',''));
+      if(sel.value!=='ignore' && map[sel.value]===-1) map[sel.value]=idx;
+    });
+    const start=hasHeader?1:0;
+    const dataRows=r.rows.slice(start);
+    const cls=currentClass();
+    let added=0, skipped=0;
+    for(const cells of dataRows){
+      let name='';
+      if(map.nom>=0 && map.prenom>=0){
+        const nom=(cells[map.nom]||'').toUpperCase();
+        const prenom=cells[map.prenom]||'';
+        name=(nom+' '+prenom).trim();
+      } else if(map.nom>=0){
+        name=(cells[map.nom]||'').trim();
+      } else if(map.prenom>=0){
+        name=(cells[map.prenom]||'').trim();
+      } else {
+        // aucune colonne mappée -> utiliser toute la ligne concaténée
+        name=cells.filter(Boolean).join(' ').trim();
+      }
+      if(!name){ skipped++; continue; }
+      let sex='';
+      if(map.sexe>=0){
+        const v=(cells[map.sexe]||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        if(/^(M|MASC|MASCU|MASCULIN|GARCON|BOY|H|HOMME)$/.test(v)) sex='M';
+        else if(/^(F|FEM|FEMME|FEMIN|FEMININ|FILLE|GIRL)$/.test(v)) sex='F';
+      }
+      const s={id:uid(),name,sex,seat:findFreeSeat(cls),trackers:{},validated:{},verified:{},needs:[]};
+      cls.students.push(s); added++;
+    }
+    save(); render();
+    closeModal();
+    toast(added+' élève(s) importé(s)'+(skipped?(', '+skipped+' ligne(s) ignorée(s)'):''));
+  };
+}
+
+/* ====================================================================
+   GÉNÉRATION DU PLAN & IMPRESSION
+==================================================================== */
+function openGenerateModal(){
+  const list=activeStudents();
+  const L=activeLayout();
+  const nbM=list.filter(s=>s.sex==='M').length;
+  const nbF=list.filter(s=>s.sex==='F').length;
+  const nbU=list.filter(s=>!s.sex).length;
+  const nbPl=L.desks.filter(d=>!d.disabled).reduce((a,d)=>a+(d.seats||2)-d.seatDisabled.filter(Boolean).length,0);
+  const sg=isSubgroupView();
+  const body=`
+  <p class="muted">${sg?'Génère le plan du sous-groupe en plaçant les élèves (venant de plusieurs classes) sur les places disponibles.':'Combinez plusieurs facteurs pour générer automatiquement le plan de classe. Les options cochées s\'appliquent dans l\'ordre : tri, alternance, puis brassage aléatoire.'}</p>
+  <div class="divider"></div>
+  <h3 style="font-size:13px">1. Tri</h3>
+  <div class="row">
+    <label class="row center" style="gap:6px"><input type="checkbox" id="genAlpha" checked> Alphabétique (nom en majuscules)</label>
+    <label class="row center" style="gap:6px"><input type="checkbox" id="genAlphaInv"> Alphabétique inverse</label>
+  </div>
+  <p class="muted" style="margin-top:4px">Le tri se fait sur la partie du nom en MAJUSCULES (nom de famille). « Inverse » s'applique après « Alphabétique » si coché.</p>
+  <div class="divider"></div>
+  <h3 style="font-size:13px">2. Alternance (association M / F)</h3>
+  <div class="row">
+    <label class="row center" style="gap:6px"><input type="checkbox" id="genAlternate"> Alterner M et F</label>
+    <select id="genAltMode" style="width:160px">
+      <option value="both">M-F-M-F…</option>
+      <option value="mFirst">Commencer par M</option>
+      <option value="fFirst">Commencer par F</option>
+    </select>
+  </div>
+  <p class="muted" style="margin-top:4px">Répartit les élèves en alternant garçons et filles sur les places. ${nbU>0?'⚠️ '+nbU+' élève(s) sans sexe défini seront placés en fin.':''}</p>
+  <div class="divider"></div>
+  <h3 style="font-size:13px">3. Brassage</h3>
+  <div class="row">
+    <label class="row center" style="gap:6px"><input type="checkbox" id="genRandom"> Aléatoire pur (ignore le tri)</label>
+  </div>
+  <p class="muted" style="margin-top:4px">Si coché, le tri et l'alternance sont ignorés : placement 100% aléatoire.</p>
+  <div class="divider"></div>
+  <div class="hint-box">📊 ${list.length} élève(s) à placer dans ${nbPl} place(s) disponible(s). M:${nbM} · F:${nbF}${nbU?' · ?:'+nbU:''}</div>
+  <div class="row" style="margin-top:10px;justify-content:flex-end">
+    <button onclick="closeModal()">Annuler</button>
+    <button class="primary" onclick="doGenerate()">🎲 Générer le plan</button>
+  </div>`;
+  openModal(sg?'🎲 Génération du plan du sous-groupe':'🎲 Génération du plan de classe', body, true);
+}
+
+// Extrait le nom de famille = partie en MAJUSCULES, sinon le dernier mot
+function sortKey(s){
+  const m = s.name.match(/([A-ZÀ-Ý]{2,})/);
+  if(m) return m[1];
+  const parts = s.name.trim().split(/\s+/);
+  return parts[parts.length-1].toUpperCase();
+}
+
+function doGenerate(){
+  const V=activeView(); const sg=isSubgroupView();
+  const alpha=document.getElementById('genAlpha').checked;
+  const alphaInv=document.getElementById('genAlphaInv').checked;
+  const alternate=document.getElementById('genAlternate').checked;
+  const altMode=document.getElementById('genAltMode').value;
+  const random=document.getElementById('genRandom').checked;
+
+  // places libres
+  const free=[];
+  V.layout.desks.forEach(d=>{ if(d.disabled) return; const nb=d.seats||2; for(let si=0;si<nb;si++) if(!d.seatDisabled[si]) free.push({deskId:d.id,index:si}); });
+
+  // liste des membres (objets élève originaux pour classe, refs pour sous-groupe)
+  let studs=activeStudents();
+
+  if(random){
+    // brassage pur
+    for(let i=studs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [studs[i],studs[j]]=[studs[j],studs[i]]; }
+    for(let i=free.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [free[i],free[j]]=[free[j],free[i]]; }
+  }else{
+    // 1. tri alphabétique
+    if(alpha){
+      studs.sort((a,b)=> sortKey(a).localeCompare(sortKey(b)));
+      if(alphaInv) studs.reverse();
+    }
+    // 2. alternance M/F
+    if(alternate){
+      let males=studs.filter(s=>s.sex==='M');
+      let females=studs.filter(s=>s.sex==='F');
+      let unknown=studs.filter(s=>!s.sex);
+      let first = (altMode==='fFirst') ? 'F' : (altMode==='mFirst' ? 'M' : (females.length>=males.length?'F':'M'));
+      const result=[];
+      let m=0,f=0;
+      while(m<males.length || f<females.length){
+        if(first==='F'){ if(f<females.length) result.push(females[f++]); if(m<males.length) result.push(males[m++]); }
+        else { if(m<males.length) result.push(males[m++]); if(f<females.length) result.push(females[f++]); }
+      }
+      studs = result.concat(unknown);
+    }
+  }
+
+  // assigner aux places
+  if(sg){
+    V.assignments=[];
+    studs.forEach((s,i)=>{ if(i<free.length){ const owner=findStudentClass(s.id); if(owner) V.assignments.push({deskId:free[i].deskId,index:free[i].index,classId:owner.id,studentId:s.id}); } });
+  } else {
+    studs.forEach((s,i)=>{ s.seat = i<free.length ? free[i] : null; });
+  }
+  save(); render(); closeModal(); toast('Plan généré ('+free.length+' places remplies sur '+studs.length+' élèves)');
+}
+window.doGenerate=doGenerate;
+
+function shuffleStudents(){ openGenerateModal(); }
+function printPlan(){
+  const V=activeView(); const d=new Date();
+  const dateStr=d.toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const label = isSubgroupView() ? 'Plan du sous-groupe' : 'Plan de classe';
+  document.getElementById('printHeader').innerHTML=`<h2>${label} — ${escapeHtml(V.name)}</h2><div class="sub">Trimestre ${state.activeTrimester} • Édité le ${dateStr}</div>`;
+  // quitter le plein écran avant d'imprimer (sinon l'impression se fait dans le contexte plein écran)
+  if(isPlanFullscreen()){
+    const done=()=>setTimeout(()=>window.print(),300);
+    if(document.fullscreenElement){ document.exitFullscreen().then(done).catch(done); }
+    else { document.getElementById('tab-plan').classList.remove('fs-fallback'); done(); }
+    return;
+  }
+  window.print();
+}
+
+/* ====================================================================
+   UTILS
+==================================================================== */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+let toastTimer=null;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),1800); }
+
+/* ====================================================================
+   EVENTS & INIT
+==================================================================== */
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('.tab-content').forEach(c=>c.style.display=c.id==='tab-'+name?'':'none');
+  if(name==='stats') renderStats();
+  if(name==='layout') renderLayoutPanel();
+  if(name==='students') renderStudentList();
+}
+function bindEvents(){
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+  document.getElementById('classSelect').addEventListener('change',e=>{ switchActiveView(e.target.value); });
+  document.getElementById('planClassSelect').addEventListener('change',e=>{ switchActiveView(e.target.value); });
+  document.getElementById('addClassBtn').onclick=addClass;
+  document.getElementById('renameClassBtn').onclick=renameClass;
+  document.getElementById('delClassBtn').onclick=deleteClass;
+  document.getElementById('addStudentBtn').onclick=addStudent;
+  document.getElementById('newStudentName').addEventListener('keydown',e=>{ if(e.key==='Enter') addStudent(); });
+  document.getElementById('searchInput').addEventListener('input',()=>{ renderStudentList(); highlightSearch(); });
+  document.getElementById('exportBtn').onclick=exportData;
+  document.getElementById('importBtn').onclick=()=>document.getElementById('fileInput').click();
+  document.getElementById('fileInput').addEventListener('change',e=>{ if(e.target.files[0]) importData(e.target.files[0]); e.target.value=''; });
+  document.getElementById('importCsvBtn').onclick=()=>document.getElementById('csvFileInput').click();
+  document.getElementById('csvFileInput').addEventListener('change',e=>{ if(e.target.files[0]) importCsv(e.target.files[0]); e.target.value=''; });
+  document.getElementById('settingsBtn').onclick=openSettings;
+  document.getElementById('saveBtn').onclick=saveNow;
+  document.getElementById('shuffleBtn').onclick=shuffleStudents;
+  document.getElementById('printBtn').onclick=printPlan;
+  document.getElementById('planAddBtn').onclick=planAddStudent;
+  document.getElementById('planRemoveBtn').onclick=openRemoveStudentModal;
+  document.getElementById('fullscreenBtn').onclick=togglePlanFullscreen;
+  document.getElementById('planSettingsBtn').onclick=openSettings;
+  // barre des non placés : accepter un dépôt pour libérer un élève de sa place
+  const upBar=document.getElementById('unplacedBar');
+  upBar.addEventListener('dragover',e=>{ if(dragData){ e.preventDefault(); upBar.classList.add('drop-active'); } });
+  upBar.addEventListener('dragleave',()=>upBar.classList.remove('drop-active'));
+  upBar.addEventListener('drop',e=>{
+    e.preventDefault(); upBar.classList.remove('drop-active');
+    if(dragData && dragData.studentId){
+      const sid=dragData.studentId;
+      if(isSubgroupView()){
+        const sgView=activeView();
+        sgView.assignments=sgView.assignments.filter(a=>a.studentId!==sid);
+        save(); render(); toast('Élève libéré du sous-groupe');
+      } else {
+        const st=findStudent(sid);
+        if(st && st.seat){ st.seat=null; save(); render(); toast('Élève libéré de sa place'); }
+      }
+    }
+  });
+  document.getElementById('boardEl').addEventListener('dblclick',()=>{ const V=activeView(); const v=prompt('Libellé du tableau :',V.layout.board.label); if(v!==null){V.layout.board.label=v; save(); render();} });
+  document.getElementById('profDeskEl').addEventListener('dblclick',()=>{ const V=activeView(); const v=prompt('Libellé du bureau prof :',V.layout.prof.label); if(v!==null){V.layout.prof.label=v; save(); render();} });
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('.seat')&&!e.target.closest('.student-card')&&!e.target.closest('.eitem')&&!e.target.closest('.chip')&&!e.target.closest('button')&&!e.target.closest('input')&&!e.target.closest('label')&&!e.target.closest('select')&&!e.target.closest('.fs-student-card')){
+      if(!e.target.closest('.sidebar')&&!e.target.closest('.modal')){ state.selectedStudentId=null; render(); }
+    }
+  });
+  window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+  // Raccourci Ctrl/Cmd + S = sauvegarde manuelle
+  window.addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='s'){ e.preventDefault(); saveNow(); } });
+  // Mettre à jour l'indicateur quand une sauvegarde a lieu (autre onglet)
+  window.addEventListener('storage',e=>{ if(e.key===STORAGE_KEY){ refreshSaveStatus(); } });
+}
+load(); bindEvents(); render(); refreshSaveStatus();
+</script>
+</body>
+</html>
